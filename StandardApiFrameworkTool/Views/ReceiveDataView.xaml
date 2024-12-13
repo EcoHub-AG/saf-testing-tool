@@ -1,0 +1,174 @@
+﻿<UserControl x:Class="StandardApiFrameworkTool.Views.ReceiveDataView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:StandardApiFrameworkTool.Views"
+             xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
+             xmlns:helpers="clr-namespace:StandardApiFrameworkTool.Helpers"
+             xmlns:controls="https://spiegelp.github.io/MaterialDesignExtensions/winfx/xaml"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid Margin="20">
+        <controls:Stepper IsLinear="False" Layout="Horizontal" >
+            <controls:Step>
+                <controls:Step.Header>
+                    <controls:StepTitleHeader FirstLevelTitle="Encryption" SecondLevelTitle="Manage your private keys" />
+                </controls:Step.Header>
+                <controls:Step.Content>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <!-- Title -->
+                            <RowDefinition Height="5*" />
+                            <!-- Public Keys Table -->
+                            <RowDefinition Height="5*" />
+                            <!-- Create Key Pair Section -->
+                        </Grid.RowDefinitions>
+
+                        <!-- Title -->
+                        <TextBlock Text="Manage Private Keys" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,10" Grid.Row="0" />
+
+                        <!-- Public Keys Table -->
+                        <DataGrid Grid.Row="1" ItemsSource="{Binding PrivateKeys}"
+                                  AutoGenerateColumns="False" 
+                                  CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True" Margin="0,10,0,10">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Key ID" Binding="{Binding Id}" Width="*"/>
+                                <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="*"/>
+                                <DataGridTextColumn Header="Created At" Binding="{Binding CreatedAt, StringFormat=d}" Width="*"/>
+                                <DataGridTemplateColumn Header="Active" Width="Auto">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Ellipse Width="15" Height="15" Fill="{Binding IsActive, Converter={StaticResource BoolToBrushConverter}}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <!-- Create Key Pair Section -->
+                        <Grid Grid.Row="2" Margin="0,10,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="auto"></RowDefinition>
+                                <RowDefinition Height="8*"></RowDefinition>
+                                <RowDefinition Height="2*"></RowDefinition>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition></ColumnDefinition>
+                                <ColumnDefinition></ColumnDefinition>
+                            </Grid.ColumnDefinitions>
+                            
+                            <TextBlock Text="Generated Key Pair:" FontWeight="SemiBold" FontSize="13" Grid.Row="0"/>
+                            <avalonedit:TextEditor 
+                                Name="PublicKeyEditor"
+                                FontFamily="Consolas"
+                                FontSize="12"
+                                Grid.Row="1"
+                                Grid.Column="0"
+                                ShowLineNumbers="True"
+                                Margin="0,5,0,10"
+                                helpers:TextEditorHelper.BoundText="{Binding GeneratedPublicKey, UpdateSourceTrigger=PropertyChanged}"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch" />  
+
+                            <avalonedit:TextEditor 
+                                Name="PrivateKeyEditor"
+                                FontFamily="Consolas"
+                                FontSize="12"
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                ShowLineNumbers="True"
+                                Margin="0,5,0,10"
+                                helpers:TextEditorHelper.BoundText="{Binding GeneratedPrivateKey, UpdateSourceTrigger=PropertyChanged}"
+                                HorizontalAlignment="Stretch"
+                                VerticalAlignment="Stretch" />
+                            
+
+                            <!-- Action Buttons -->
+                            <Grid HorizontalAlignment="Left"  Grid.Row="2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition></ColumnDefinition>
+                                    <ColumnDefinition></ColumnDefinition>
+                                </Grid.ColumnDefinitions>
+                                
+                                <Button Content="Create Key Pair" Margin="0,0,10,0"
+                                    Command="{Binding GenerateKeyPairCommand}" 
+                                     />
+                                <Button Content="Validate &amp; Activate Key" Grid.Column="1"
+                                    Command="{Binding ActivateKeyCommand}"
+                                    />
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                </controls:Step.Content>
+            </controls:Step>
+            <controls:Step>
+                <controls:Step.Header>
+                    <controls:StepTitleHeader FirstLevelTitle="Received Events" />
+                </controls:Step.Header>
+                <controls:Step.Content>
+                    <Grid>
+                        <!-- Define two columns: left for thread list, right for payload viewer -->
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2.5*" />
+                            <!-- Thread list -->
+                            <ColumnDefinition Width="7.5*" />
+                            <!-- Payload viewer -->
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Thread List -->
+                        <Border BorderBrush="Gray" BorderThickness="1" Margin="0,0,10,0" Grid.Column="0">
+                            <ListBox ItemsSource="{Binding ThreadList}" 
+                         SelectedItem="{Binding SelectedThread}" 
+                         Margin="5"
+                         Background="WhiteSmoke">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Vertical">
+                                            <TextBlock Text="{Binding Title}" FontWeight="Bold" Margin="5,5,0,0" />
+                                            <TextBlock Text="{Binding Timestamp}" FontSize="12" Foreground="Gray" Margin="5,0,0,5" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Border>
+
+                        <!-- Payload Viewer -->
+                        <Grid Grid.Column="1">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <!-- Title -->
+                                <RowDefinition Height="*" />
+                                <!-- Avalon Editor -->
+                            </Grid.RowDefinitions>
+
+                            <!-- Title -->
+                            <TextBlock Text="Event Payload" 
+                           FontWeight="SemiBold" 
+                           FontSize="15" 
+                           Margin="0,0,0,10" 
+                           Grid.Row="0" />
+
+                            <!-- AvalonEdit for Payload -->
+                            <avalonedit:TextEditor 
+                    Name="PayloadEditor"
+                    FontFamily="Consolas"
+                    FontSize="14"
+                    IsReadOnly="True"
+                    ShowLineNumbers="True"
+                                
+                                SyntaxHighlighting="CSharp"
+                    Margin="0,5,0,0"
+                     Loaded="PayloadEditor_Loaded"
+                    helpers:TextEditorHelper.BoundText="{Binding SelectedThreadPayload, UpdateSourceTrigger=PropertyChanged}"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    Grid.Row="1" />
+                        </Grid>
+                    </Grid>
+                </controls:Step.Content>
+            </controls:Step>
+        </controls:Stepper>
+    </Grid>
+</UserControl>
