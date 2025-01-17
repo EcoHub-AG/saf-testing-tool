@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using StandardApiFrameworkTool.Exceptions;
 using StandardApiFrameworkTool.Models;
 using System;
 using System.Net.Http;
@@ -37,6 +38,93 @@ namespace StandardApiFrameworkTool.Services
                 else
                 {
                     throw new HttpRequestException($"Failed to fetch public key. Status code: {response.StatusCode}");
+                }
+            }
+        }
+
+        public static async Task<Guid> UploadPublicKey(
+            string baseAddress,
+            string key,
+            string version,
+            int expireInDays,
+            X509Certificate2 certificate)
+        {
+            string apiUrl = $"{baseAddress}/publickeystore/keys";
+
+            HttpClientHandler handler = new HttpClientHandler
+            {
+                ClientCertificateOptions = ClientCertificateOption.Manual,
+                SslProtocols = System.Security.Authentication.SslProtocols.Tls12
+            };
+
+            var reqBody = new
+            {
+                version,
+                key,
+                expireInDays
+            };
+            var content = new StringContent(JsonConvert.SerializeObject(reqBody), System.Text.Encoding.UTF8, "application/json");
+
+            handler.ClientCertificates.Add(certificate);
+
+            using (HttpClient client = new HttpClient(handler))
+            {
+                HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+                string responseBody = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var pkiDetails = JsonConvert.DeserializeObject<PublicKeyDetails>(responseBody);
+                    return pkiDetails.KeyId;
+                }
+                else
+                {
+                    using (JsonDocument doc = JsonDocument.Parse(responseBody))
+                    {
+                        // Access the "errorCode" property
+                        if (doc.RootElement.TryGetProperty("errorCode", out JsonElement errorCodeElement))
+                        {
+                            string errorCode = errorCodeElement.GetString();
+                            if(errorCode == "KEY_VERSION_EXISTS") 
+                            {
+                                throw new KeyVersionExists();
+                            }
+                        }
+                    }
+
+                    throw new HttpRequestException($"Failed to upload public key. Status code: {response.StatusCode}");
+                }
+            }
+        }
+
+        public static async Task ActivatePublicKey(
+            string baseAddress,
+            string keyId,
+            X509Certificate2 certificate)
+        {
+            string apiUrl = $"{baseAddress}/publickeystore/keys/{keyId}/activate";
+
+            HttpClientHandler handler = new HttpClientHandler
+            {
+                ClientCertificateOptions = ClientCertificateOption.Manual,
+                SslProtocols = System.Security.Authentication.SslProtocols.Tls12
+            };
+
+            handler.ClientCertificates.Add(certificate);
+
+            using (HttpClient client = new HttpClient(handler))
+            {
+                HttpResponseMessage response = await client.PostAsync(apiUrl, null);
+                string responseBody = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return;
+                }
+                else
+                {
+
+                    throw new HttpRequestException($"Failed to activate public key. Status code: {response.StatusCode}");
                 }
             }
         }

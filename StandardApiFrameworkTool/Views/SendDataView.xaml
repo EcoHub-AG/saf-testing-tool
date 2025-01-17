@@ -158,7 +158,8 @@
 
                         <!-- Step Button Bar -->
                         <Grid Grid.Row="2">
-                            <controls:StepButtonBar Back="BACK" Continue="SEND" Mode="Horizontal"/>
+                            <!--<controls:StepButtonBar Back="BACK" Continue="SEND" ContinueCommand="{Binding SendPayloadCommand}" Mode="Horizontal"/>-->
+                            <Button Command="{Binding SendPayloadCommand}">Send Payload</Button>
                         </Grid>
                     </Grid>
                 </controls:Step.Content>

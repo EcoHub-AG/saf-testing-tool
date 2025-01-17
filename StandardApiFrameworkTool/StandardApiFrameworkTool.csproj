@@ -15,6 +15,8 @@
 
   <ItemGroup>
     <PackageReference Include="AvalonEdit" Version="6.3.0.90" />
+    <PackageReference Include="Confluent.Kafka" Version="2.6.1" />
+	<PackageReference Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.3.0" />
     <PackageReference Include="MaterialDesignExtensions" Version="3.3.0" />
     <PackageReference Include="MaterialDesignThemes" Version="4.9.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />

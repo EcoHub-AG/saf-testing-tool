@@ -15,6 +15,10 @@ using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Security.Cryptography.Pkcs;
 using Newtonsoft.Json;
+using Confluent.Kafka;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+using Confluent.SchemaRegistry;
+using Confluent.SchemaRegistry.Serdes;
 
 namespace StandardApiFrameworkTool.ViewModels
 {
@@ -30,7 +34,7 @@ namespace StandardApiFrameworkTool.ViewModels
             LoadReceiversCommand = new RelayCommand(async () => await LoadReceiversAsync());
             EncryptContentCommand = new RelayCommand(async () => await FetchAndEncryptContentAsync());
             GeneratePayloadCommand = new RelayCommand(GeneratePayload);
-
+            SendPayloadCommand = new RelayCommand(async () => await SendPayload());
         }
 
         
@@ -225,6 +229,9 @@ namespace StandardApiFrameworkTool.ViewModels
                     environment.ServicesApiUrl, 
                     SelectedReceiver.Idp.FirstOrDefault(), 
                     certificate);
+
+
+
                 if (publicKeyInfo == null || string.IsNullOrWhiteSpace(publicKeyInfo.Key))
                 {
                     MessageBox.Show("Failed to retrieve a valid public key.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -263,14 +270,12 @@ namespace StandardApiFrameworkTool.ViewModels
                 byte[] aesKey = aes.Key;
 
                 // Encrypt AES key with the public key
-                RSACryptoServiceProvider rsa = new();
+                using RSA rsa = RSA.Create();
 
-                // Extract and clean the public key
-                var publicKeyText = Regex.Replace(publicKey, @"-----BEGIN PUBLIC KEY-----\s*", "");
-                publicKeyText = Regex.Replace(publicKeyText, @"\s*-----END PUBLIC KEY-----", "");
+                // Import the public key directly using RSA class
+                rsa.ImportFromPem(publicKey.ToCharArray());
 
-                rsa.ImportSubjectPublicKeyInfo(Convert.FromBase64String(publicKeyText), out _);
-                byte[] encryptedAesKey = rsa.Encrypt(aesKey, true);
+                byte[] encryptedAesKey = rsa.Encrypt(aesKey, RSAEncryptionPadding.OaepSHA256);
 
                 EncryptedAESKey = Convert.ToBase64String(encryptedAesKey);
 
@@ -315,6 +320,7 @@ namespace StandardApiFrameworkTool.ViewModels
         }
 
 
+
         #endregion
 
         #region step 3 - send payload
@@ -333,54 +339,190 @@ namespace StandardApiFrameworkTool.ViewModels
 
         public ICommand GeneratePayloadCommand { get; }
 
-        private void GeneratePayload()
+        private async void GeneratePayload()
         {
+            var profile = _dbContext.Profiles.FirstOrDefault();
+            if (profile == null)
+            {
+                MessageBox.Show("Profile information is missing. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var environment = _dbContext.EnvironmentSettings.FirstOrDefault(e => e.EnvironmentName == profile.SelectedEnvironment);
+            if (environment == null)
+            {
+                MessageBox.Show("Environment not found. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(InputContent))
+            {
+                MessageBox.Show("Please enter content to encrypt.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var certificate = GetClientCertificate();
+
+            if (SelectedReceiver == null)
+            {
+                MessageBox.Show("Please select a receiver first from step 1", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // Fetch the public key
+            var publicKeyInfo = await PublicKeyStoreService.FetchPublicKey(
+                environment.ServicesApiUrl,
+                SelectedReceiver.Idp.FirstOrDefault(),
+                certificate);
+
+
             // Initialize the model with the values directly
             var offerNLPIEvent = new OfferNLPIEventType
             {
-                Id = "b7d7cfd3-791e-430d-8791-e883d9c",
-                Source = "http://www.myecohub.ch/ck-postman",
+                Id = Guid.NewGuid().ToString(),
+                Source = "http://www.myecohub.ch/",
                 Specversion = "0.3.0",
-                Type = "offer.nlpi",
+                Type = "data",
                 DataContentType = "application/json",
                 DataSchema = "http://www.myecohub.ch/ib2b/offer/nlpi/v0.2.0",
-                Subject = "Before Change 1",
-                Time = "2023-10-20T13:38:27.792Z",
+                Subject = "Test subject",
+                Time = DateTime.Now.ToString(),
                 Data = new Data
                 {
-                    Payload = "CVPZIsWfhIPvEPgsSWSPx9utKqeyv4sx4XLS8jFnxdmMQJ6J2i/b/5FPfWmTpKkvLQBTCib1Y+gPO5ilu9jOMbG3eK95vQaxmibY85bCBhdolRqTssjslE97yIgO6bFRdeV1KGZBUxhw1llZccbMtQElrhWmx+D6ioSkpz6WOzMJjHr94DnrdneQ3pDNXXyQiUIfiYv3cuOAzksxB/YY/bCsngwBkTEaNm9MyWfYKRXxBcvgu+b5Pg1INNSMqBUR",
+                    Payload = EncryptedContent,
                     Links = new List<Links>(), // Empty list, as per the provided JSON
-                    EncryptionKey = "ARaaBp1wIEoMNol15cgce/mMq776//we/RgrhtvZAsq9kP+0xhB0U8fK7H98JeGBubwHexqHsEa84AjCn/D2qHQr/NG4xw99NpKMxhgAjNPe0LBvhd41F25tmNDo54kd6H0SzdOZzssgf6OkK7/kq4wzB6w2s2vGur7gE934T+vH60XHZHUV9cEyO1c9kb7jqo2ROSAVEGkHhcnUZuUv+Y1Sf6D9u63ZXgkL8p7X2e/ybuOfjD7dWPlncL7vyEnBE1CPDsXA8LwLWYn5+A0bjGEps3NqwLIT8jz8ktYkzvGpBV81ak/T6sDHsCn06QCDGHTpytG359tGvdCVPVEkDQ==",
-                    PublicKeyVersion = "11.0.0"
+                    EncryptionKey = EncryptedAESKey,
+                    PublicKeyVersion = publicKeyInfo.version,
                 },
                 LicenceKey = "M/E49G0HE+rfUHgo1+Tk/yEiDQNzvIsywHvW2w1jyYk=laUAGTNsagFnViq82sq2ltPG82XpQMZZHxEFAiCIzFU=",
                 UserAgent = new UserAgent
                 {
-                    Name = "Clemens Postman",
+                    Name = "SAF testing tool",
                     Version = "1.0"
                 },
                 EventReceiver = new EventReceiver
                 {
                     Category = "broker",
-                    Id = "IDP5343269"
+                    Id = SelectedReceiver.Idp.FirstOrDefault(),
                 },
                 EventSender = new EventSender
                 {
                     Category = "insurer",
-                    Id = "IDP8033870"
+                    Id = profile.IdpNumber.ToString(),
                 },
-                ProcessId = "58991281-3789-4446-94ef-e4d7d005d2e2",
+                ProcessId = Guid.NewGuid().ToString(),
                 ProcessStatus = "active",
                 SubProcessName = "request",
                 ProcessName = "offer.nlpi",
                 SubProcessStatus = "Created"
             };
 
+
             // Serialize the object and format it with indentation
             string jsonString = JsonConvert.SerializeObject(offerNLPIEvent, Formatting.Indented);
 
 
             PayloadContent = jsonString;
+        }
+
+        public ICommand SendPayloadCommand { get; }
+
+        public async Task SendPayload()
+        {
+            var profile = _dbContext.Profiles.FirstOrDefault();
+            if (profile == null)
+            {
+                MessageBox.Show("Not connected. Please configure general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // Retrieve environment settings from the database
+            var env = _dbContext.EnvironmentSettings.FirstOrDefault(e => e.EnvironmentName == profile.SelectedEnvironment);
+
+            if (env == null)
+            {
+                MessageBox.Show("Environment settings not found!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // Read SSL certificate information from the environment and file system
+            var certificate = GetClientCertificate();  // Implement your logic to get client certificate
+            var publicKeyPem = certificate.ExportCertificatePem();
+            var privateKey = certificate.GetRSAPrivateKey();
+            var privateKeyPem = privateKey.ExportRSAPrivateKeyPem();
+            //var caPem = File.ReadAllText("ca.pem");  // Update this with your correct path to the CA file if required
+
+            // Kafka configuration details fetched from the DB
+            string bootstrapServers = $"{env.CsmHost}:9092";  // Example, use the database entry for CsmHost
+            string topic = "eh.saf.in";  // The topic you want to send the message to
+
+            // Kafka producer configuration
+            var config = new ProducerConfig
+            {
+                BootstrapServers = bootstrapServers,
+                SecurityProtocol = SecurityProtocol.Ssl,
+                SslCertificatePem = publicKeyPem,
+                SslKeyPem = privateKeyPem,
+                //SslCaPem = caPem, // Uncomment if you need to use the CA PEM
+            };
+
+            // Schema registry configuration (keep this unchanged or use DB if necessary)
+            var schemaRegistryConfig = new SchemaRegistryConfig
+            {
+                Url = "https://psrc-qrk9d.westeurope.azure.confluent.cloud:443",
+                BasicAuthUserInfo = "FCYTB2BG73BWKLZ5:juvZLo3Frvgoqn9Mb5dDJjaXx4NAYf1PwY+k5egoUBEHIYYCnmgzJE/M7uCCYjPv"
+            };
+
+
+            try
+            {
+                // Parse the JSON input
+                var myEvent = Newtonsoft.Json.JsonConvert.DeserializeObject<OfferNLPIEventType>(PayloadContent);
+
+                var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig);
+
+
+                // Create the Kafka producer
+                using var producer = new ProducerBuilder<ProcessIdType, OfferNLPIEventType>(config)
+                    .SetValueSerializer(new JsonSerializer<OfferNLPIEventType>(schemaRegistry, new JsonSerializerConfig
+                    {
+                        BufferBytes = 100,
+                        UseLatestVersion = true,
+                        AutoRegisterSchemas = false,
+                        SubjectNameStrategy = SubjectNameStrategy.Topic
+                    }))
+                    .SetKeySerializer(new JsonSerializer<ProcessIdType>(schemaRegistry, new JsonSerializerConfig
+                    {
+                        UseLatestVersion = true,
+                        AutoRegisterSchemas = false,
+                        //SubjectNameStrategy = SubjectNameStrategy.Topic
+                    }))
+                    .Build();
+
+                // Create a message to send
+                var message = new Message<ProcessIdType, OfferNLPIEventType>
+                {
+                    Key = new ProcessIdType { ProcessId = Guid.NewGuid() },
+                    Value = myEvent
+                };
+
+                // Send the message to the Kafka topic
+                var deliveryReport = await producer.ProduceAsync(topic, message);
+
+                MessageBox.Show($"Message sent to topic {topic}. Offset: {deliveryReport.Offset}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Newtonsoft.Json.JsonException ex)
+            {
+                MessageBox.Show($"Invalid JSON format: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (ProduceException<ProcessIdType, OfferNLPIEventType> ex)
+            {
+                MessageBox.Show($"Kafka error: {ex.Error.Reason}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"An error occurred: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         #endregion
