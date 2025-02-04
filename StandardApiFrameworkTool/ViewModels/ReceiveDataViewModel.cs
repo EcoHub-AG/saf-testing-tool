@@ -352,7 +352,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 rsaPrivate.ImportFromPem(privateKeyInfo.Key);
 
                 // Decrypt the AES key
-                byte[] decryptedAesKey = rsaPrivate.Decrypt(encryptedAesKey, RSAEncryptionPadding.OaepSHA256);
+                byte[] decryptedAesKey = rsaPrivate.Decrypt(encryptedAesKey, RSAEncryptionPadding.Pkcs1);
 
                 return decryptedAesKey;
             }
@@ -364,7 +364,7 @@ namespace StandardApiFrameworkTool.ViewModels
         }
 
         // Method to decrypt the content using AES
-        private byte[] DecryptWithAES(byte[] encryptedData, byte[] key)
+        private byte[] DecryptWithAES_CBC(byte[] encryptedData, byte[] key)
         {
             using (Aes aes = Aes.Create())
             {
@@ -383,6 +383,23 @@ namespace StandardApiFrameworkTool.ViewModels
                     cs.FlushFinalBlock();
                     return ms.ToArray();
                 }
+            }
+        }
+
+        private byte[] DecryptWithAES(byte[] encryptedData, byte[] key)
+        {
+            using (AesGcm aesGcm = new AesGcm(key))
+            {
+                // The first 12 bytes are the AES GCM nonce (IV), the last 16 bytes are the authentication tag, and the rest is the encrypted content
+                byte[] nonce = encryptedData.Take(12).ToArray();
+                byte[] tag = encryptedData.Skip(encryptedData.Length - 16).ToArray();
+                byte[] encryptedContent = encryptedData.Skip(12).Take(encryptedData.Length - 28).ToArray();
+
+                byte[] decryptedData = new byte[encryptedContent.Length];
+
+                aesGcm.Decrypt(nonce, encryptedContent, tag, decryptedData);
+
+                return decryptedData;
             }
         }
 

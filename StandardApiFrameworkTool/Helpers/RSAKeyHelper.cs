@@ -14,33 +14,11 @@ namespace StandardApiFrameworkTool.Helpers
             using (var rsa = RSA.Create(2048))
             {
                 // Export keys in PEM format
-                string publicKeyPem = ExportPublicKeyToPem(rsa);
-                string privateKeyPem = ExportPrivateKeyToPem(rsa);
+                string publicKeyPem = rsa.ExportRSAPublicKeyPem();
+                string privateKeyPem = rsa.ExportPkcs8PrivateKeyPem();
 
                 return (publicKeyPem, privateKeyPem);
             }
-        }
-
-        private static string ExportPublicKeyToPem(RSA rsa)
-        {
-            var publicKeyBytes = rsa.ExportSubjectPublicKeyInfo();
-            return ConvertToPem(publicKeyBytes, "PUBLIC KEY");
-        }
-
-        private static string ExportPrivateKeyToPem(RSA rsa)
-        {
-            var privateKeyBytes = rsa.ExportPkcs8PrivateKey();
-            return ConvertToPem(privateKeyBytes, "PRIVATE KEY");
-        }
-
-        private static string ConvertToPem(byte[] keyBytes, string keyType)
-        {
-            var base64Key = Convert.ToBase64String(keyBytes, Base64FormattingOptions.InsertLineBreaks);
-            var builder = new StringBuilder();
-            builder.AppendLine($"-----BEGIN {keyType}-----");
-            builder.AppendLine(base64Key);
-            builder.AppendLine($"-----END {keyType}-----");
-            return builder.ToString();
         }
 
 
@@ -59,10 +37,10 @@ namespace StandardApiFrameworkTool.Helpers
                 string testMessage = "Test message for RSA key validation";
 
                 // Encrypt with public key
-                byte[] encryptedData = rsaPublic.Encrypt(Encoding.UTF8.GetBytes(testMessage), RSAEncryptionPadding.OaepSHA256);
+                byte[] encryptedData = rsaPublic.Encrypt(Encoding.UTF8.GetBytes(testMessage), RSAEncryptionPadding.Pkcs1);
 
                 // Decrypt with private key
-                byte[] decryptedData = rsaPrivate.Decrypt(encryptedData, RSAEncryptionPadding.OaepSHA256);
+                byte[] decryptedData = rsaPrivate.Decrypt(encryptedData, RSAEncryptionPadding.Pkcs1);
 
                 // Convert decrypted data back to string
                 string decryptedMessage = Encoding.UTF8.GetString(decryptedData);

@@ -275,7 +275,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 // Import the public key directly using RSA class
                 rsa.ImportFromPem(publicKey.ToCharArray());
 
-                byte[] encryptedAesKey = rsa.Encrypt(aesKey, RSAEncryptionPadding.OaepSHA256);
+                byte[] encryptedAesKey = rsa.Encrypt(aesKey, RSAEncryptionPadding.Pkcs1);
 
                 EncryptedAESKey = Convert.ToBase64String(encryptedAesKey);
 
@@ -303,20 +303,45 @@ namespace StandardApiFrameworkTool.ViewModels
             return ms.ToArray();
         }
 
+        //private byte[] EncryptWithAES(byte[] data, byte[] key)
+        //{
+        //    using Aes aes = Aes.Create();
+        //    aes.Key = key;
+        //    aes.GenerateIV();
+
+        //    using MemoryStream ms = new MemoryStream();
+        //    using (CryptoStream cs = new CryptoStream(ms, aes.CreateEncryptor(), CryptoStreamMode.Write))
+        //    {
+        //        cs.Write(data, 0, data.Length);
+        //        cs.FlushFinalBlock();
+        //    }
+
+        //    return aes.IV.Concat(ms.ToArray()).ToArray();
+        //}
+
         private byte[] EncryptWithAES(byte[] data, byte[] key)
         {
-            using Aes aes = Aes.Create();
-            aes.Key = key;
-            aes.GenerateIV();
-
-            using MemoryStream ms = new MemoryStream();
-            using (CryptoStream cs = new CryptoStream(ms, aes.CreateEncryptor(), CryptoStreamMode.Write))
+            // AES GCM uses a 12-byte nonce (IV)
+            byte[] nonce = new byte[12];
+            using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
             {
-                cs.Write(data, 0, data.Length);
-                cs.FlushFinalBlock();
+                rng.GetBytes(nonce); // Generate a secure random nonce
             }
 
-            return aes.IV.Concat(ms.ToArray()).ToArray();
+            // Define the tag size explicitly (16 bytes for AES GCM)
+            const int tagSizeInBytes = 16;
+
+            // Create the AES GCM object with explicit tag size
+            using AesGcm aesGcm = new(key, tagSizeInBytes);
+            // Encrypted output will be: nonce (12 bytes) + encrypted content + tag (16 bytes)
+            byte[] encryptedContent = new byte[data.Length];
+            byte[] tag = new byte[tagSizeInBytes]; // Use the explicit tag size
+
+            // Encrypt the data
+            aesGcm.Encrypt(nonce, data, encryptedContent, tag);
+
+            // Combine nonce, encrypted content, and tag into a single byte array
+            return [.. nonce, .. encryptedContent, .. tag];
         }
 
 
@@ -394,7 +419,7 @@ namespace StandardApiFrameworkTool.ViewModels
                     EncryptionKey = EncryptedAESKey,
                     PublicKeyVersion = publicKeyInfo.version,
                 },
-                LicenceKey = "M/E49G0HE+rfUHgo1+Tk/yEiDQNzvIsywHvW2w1jyYk=laUAGTNsagFnViq82sq2ltPG82XpQMZZHxEFAiCIzFU=",
+                LicenceKey = profile.LicenseKey,
                 UserAgent = new UserAgent
                 {
                     Name = "SAF testing tool",
