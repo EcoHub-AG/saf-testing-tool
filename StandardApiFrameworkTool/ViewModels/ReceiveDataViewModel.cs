@@ -388,40 +388,33 @@ namespace StandardApiFrameworkTool.ViewModels
 
         private byte[] DecryptWithAES(byte[] encryptedData, byte[] key)
         {
-            using (AesGcm aesGcm = new AesGcm(key))
-            {
-                // The first 12 bytes are the AES GCM nonce (IV), the last 16 bytes are the authentication tag, and the rest is the encrypted content
-                byte[] nonce = encryptedData.Take(12).ToArray();
-                byte[] tag = encryptedData.Skip(encryptedData.Length - 16).ToArray();
-                byte[] encryptedContent = encryptedData.Skip(12).Take(encryptedData.Length - 28).ToArray();
+            // Define the tag size explicitly (16 bytes for AES GCM)
+            const int tagSizeInBytes = 16;
 
-                byte[] decryptedData = new byte[encryptedContent.Length];
+            // The first 12 bytes are the AES GCM nonce (IV), the last 16 bytes are the authentication tag, and the rest is the encrypted content
+            byte[] nonce = encryptedData.Take(12).ToArray();
+            byte[] tag = encryptedData.Skip(encryptedData.Length - tagSizeInBytes).ToArray();
+            byte[] encryptedContent = encryptedData.Skip(12).Take(encryptedData.Length - 12 - tagSizeInBytes).ToArray();
 
-                aesGcm.Decrypt(nonce, encryptedContent, tag, decryptedData);
+            // Create the AES GCM object with explicit tag size
+            using AesGcm aesGcm = new AesGcm(key, tagSizeInBytes);
+            byte[] decryptedData = new byte[encryptedContent.Length];
 
-                return decryptedData;
-            }
+            // Decrypt the data
+            aesGcm.Decrypt(nonce, encryptedContent, tag, decryptedData);
+
+            return decryptedData;
         }
 
         // Method to unzip the decrypted content
-        private string UnzipContent(byte[] decryptedContent)
+        private string UnzipContent(byte[] compressedData)
         {
-            using (MemoryStream ms = new MemoryStream(decryptedContent))
-            using (ZipArchive archive = new ZipArchive(ms, ZipArchiveMode.Read))
+            using (var inputStream = new MemoryStream(compressedData))
+            using (var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress))
+            using (var outputStream = new MemoryStream())
             {
-                // Assuming there's only one entry in the zip (e.g., "content.txt")
-                ZipArchiveEntry entry = archive.GetEntry("content.txt");
-                if (entry != null)
-                {
-                    using (StreamReader reader = new StreamReader(entry.Open()))
-                    {
-                        return reader.ReadToEnd();
-                    }
-                }
-                else
-                {
-                    return string.Empty;
-                }
+                gzipStream.CopyTo(outputStream);
+                return Encoding.UTF8.GetString(outputStream.ToArray());
             }
         }
 

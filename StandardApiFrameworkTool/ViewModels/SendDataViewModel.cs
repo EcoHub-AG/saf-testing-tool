@@ -19,6 +19,7 @@ using Confluent.Kafka;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
+using System.Text;
 
 namespace StandardApiFrameworkTool.ViewModels
 {
@@ -264,7 +265,7 @@ namespace StandardApiFrameworkTool.ViewModels
             {
                 // 1. Generate AES key
                 using Aes aes = Aes.Create();
-                aes.KeySize = 128;
+                aes.KeySize = 256;
                 aes.GenerateKey();
 
                 byte[] aesKey = aes.Key;
@@ -294,14 +295,14 @@ namespace StandardApiFrameworkTool.ViewModels
         private byte[] ZipContent(string content)
         {
             using MemoryStream ms = new MemoryStream();
-            using (ZipArchive archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+            using (GZipStream gzip = new GZipStream(ms, CompressionMode.Compress, true))
             {
-                ZipArchiveEntry entry = archive.CreateEntry("content.txt");
-                using StreamWriter writer = new StreamWriter(entry.Open());
+                using StreamWriter writer = new StreamWriter(gzip, Encoding.UTF8);
                 writer.Write(content);
             }
             return ms.ToArray();
         }
+
 
         //private byte[] EncryptWithAES(byte[] data, byte[] key)
         //{
