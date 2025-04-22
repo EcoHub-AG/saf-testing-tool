@@ -297,9 +297,10 @@ namespace StandardApiFrameworkTool.ViewModels
             using MemoryStream ms = new MemoryStream();
             using (GZipStream gzip = new GZipStream(ms, CompressionMode.Compress, true))
             {
-                using StreamWriter writer = new StreamWriter(gzip, Encoding.UTF8);
+                using StreamWriter writer = new StreamWriter(gzip, new UTF8Encoding(false));
                 writer.Write(content);
             }
+
             return ms.ToArray();
         }
 
@@ -407,12 +408,12 @@ namespace StandardApiFrameworkTool.ViewModels
             {
                 Id = Guid.NewGuid().ToString(),
                 Source = "http://www.myecohub.ch/",
-                Specversion = "0.3.0",
+                Specversion = "1.0",
                 Type = "data",
                 DataContentType = "application/json",
                 DataSchema = "http://www.myecohub.ch/ib2b/offer/nlpi/v0.2.0",
                 Subject = "Test subject",
-                Time = DateTime.Now.ToString(),
+                Time = DateTime.UtcNow.ToString("yyyy-MM-ddThh:mm:ss.fffZ"),
                 Data = new Data
                 {
                     Payload = EncryptedContent,

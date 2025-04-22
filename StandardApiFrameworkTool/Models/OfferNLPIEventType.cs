@@ -81,10 +81,10 @@ namespace StandardApiFrameworkTool.Models
         [JsonProperty("type", NullValueHandling = NullValueHandling.Ignore)]
         public string Type { get; set; }
 
-        [JsonProperty("dataContentType", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty("datacontenttype", NullValueHandling = NullValueHandling.Ignore)]
         public string DataContentType { get; set; }
 
-        [JsonProperty("dataSchema", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty("dataschema", NullValueHandling = NullValueHandling.Ignore)]
         public string DataSchema { get; set; }
 
         [JsonProperty("subject", NullValueHandling = NullValueHandling.Ignore)]
