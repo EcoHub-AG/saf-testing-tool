@@ -224,11 +224,11 @@ namespace StandardApiFrameworkTool.ViewModels
                 JToken json = JToken.Parse(jsonString);
 
                 // Extract the "Id" field and get the first part of the GUID
-                string fullGuid = json["Id"]?.ToString();
+                string fullGuid = json["id"]?.ToString();
                 string firstPartOfGuid = fullGuid?.Split('-')[0];
 
                 // Extract the "EventSender.Id" field
-                string senderId = json["EventSender"]?["Id"]?.ToString();
+                string senderId = json["eventSender"]?["id"]?.ToString();
 
                 // Output the extracted values
                 return $"{senderId} - {firstPartOfGuid}";
@@ -293,6 +293,11 @@ namespace StandardApiFrameworkTool.ViewModels
             catch (Exception)
             {
                 return "Event Deserialize failed";
+            }
+
+            if(offerNlpi.Data == null)
+            {
+                return content;
             }
 
             try

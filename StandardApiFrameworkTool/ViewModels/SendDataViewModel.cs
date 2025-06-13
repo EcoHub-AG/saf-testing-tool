@@ -529,7 +529,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 // Create a message to send
                 var message = new Message<ProcessIdType, OfferNLPIEventType>
                 {
-                    Key = new ProcessIdType { ProcessId = Guid.NewGuid() },
+                    Key = new ProcessIdType { ProcessId = Guid.Parse(myEvent.ProcessId) },
                     Value = myEvent
                 };
 
