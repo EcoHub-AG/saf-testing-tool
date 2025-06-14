@@ -51,7 +51,7 @@
                          IsIndeterminate="{Binding IsProcessing}"
                           />
             <Separator />
-            <TextBlock Text="V-0" 
+            <TextBlock Text="Version 0" 
                Foreground="White" 
                VerticalAlignment="Center" 
                Margin="5" />
