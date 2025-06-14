@@ -50,6 +50,11 @@
             <ProgressBar Width="150" Height="16" 
                          IsIndeterminate="{Binding IsProcessing}"
                           />
+            <Separator />
+            <TextBlock Text="V-0" 
+               Foreground="White" 
+               VerticalAlignment="Center" 
+               Margin="5" />
         </StatusBar>
     </Grid>
 </Window>
