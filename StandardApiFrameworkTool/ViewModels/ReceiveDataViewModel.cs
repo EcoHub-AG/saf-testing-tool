@@ -35,9 +35,20 @@ namespace StandardApiFrameworkTool.ViewModels
             GenerateKeyPairCommand = new RelayCommand(GenerateKeyPair);
             ActivateKeyCommand = new RelayCommand(async () => await ActivateKey());
 
+            GenerateSignatureKeyPairCommand = new RelayCommand(GenerateSignatureKeyPair);
+            ActivateSignatureKeyCommand = new RelayCommand(async () => await ActivateSignatureKey());
+
             _dbContext = new AppDbContext();
 
             PrivateKeys = new ObservableCollection<PrivateKey>(_dbContext.PrivateKeys.Select(pk => new PrivateKey
+            {
+                Id = pk.Id,
+                Version = pk.Version,
+                CreatedAt = pk.CreatedAt,
+                IsActive = pk.IsActive,
+            }));
+
+            SignatureKeys = new ObservableCollection<SignatureKey>(_dbContext.SignatureKeys.Select(pk => new SignatureKey
             {
                 Id = pk.Id,
                 Version = pk.Version,
@@ -467,12 +478,11 @@ namespace StandardApiFrameworkTool.ViewModels
 
         private void GenerateKeyPair()
         {
-            
+
             (GeneratedPublicKey, GeneratedPrivateKey) = RSAKeyHelper.GenerateKeyPair();
             OnPropertyChanged(nameof(GeneratedPublicKey));
             OnPropertyChanged(nameof(GeneratedPrivateKey));
         }
-
 
         private async Task ActivateKey()
         {
@@ -489,6 +499,148 @@ namespace StandardApiFrameworkTool.ViewModels
             {
                 ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
             });
+        }
+
+        #region properties signature keys
+
+        public ICommand GenerateSignatureKeyPairCommand { get; }
+        public ICommand ActivateSignatureKeyCommand { get; }
+
+        private ObservableCollection<SignatureKey> _signatureKeys;
+
+        public ObservableCollection<SignatureKey> SignatureKeys
+        {
+            get { return _signatureKeys; }
+            set { _signatureKeys = value; OnPropertyChanged(nameof(SignatureKeys)); }
+        }
+
+        private string _generatedSignaturePublicKey;
+
+        public string GeneratedSignaturePublicKey
+        {
+            get { return _generatedSignaturePublicKey; }
+            set
+            {
+                _generatedSignaturePublicKey = value;
+                OnPropertyChanged(nameof(GeneratedSignaturePublicKey));
+            }
+        }
+
+        private string _generatedSignaturePrivateKey;
+
+        public string GeneratedSignaturePrivateKey
+        {
+            get { return _generatedSignaturePrivateKey; }
+            set
+            {
+                _generatedSignaturePrivateKey = value;
+                OnPropertyChanged(nameof(GeneratedSignaturePrivateKey));
+            }
+        }
+
+        private void GenerateSignatureKeyPair()
+        {
+
+            (GeneratedSignaturePublicKey, GeneratedSignaturePrivateKey) = ECDSAKeyHelper.GenerateECDsaKeyPair();
+            OnPropertyChanged(nameof(GeneratedSignaturePublicKey));
+            OnPropertyChanged(nameof(GeneratedSignaturePrivateKey));
+        }
+
+        private async Task ActivateSignatureKey()
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = true;
+            });
+
+            await UploadSignatureKeyAndSaveToDatabase();
+            GeneratedSignaturePublicKey = string.Empty;
+            GeneratedSignaturePrivateKey = string.Empty;
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
+            });
+        }
+
+        #endregion
+
+        private async Task UploadSignatureKeyAndSaveToDatabase()
+        {
+            if (string.IsNullOrWhiteSpace(GeneratedSignaturePublicKey) 
+                || string.IsNullOrWhiteSpace(GeneratedSignaturePrivateKey))
+            {
+                MessageBox.Show("Empty public key or private key. Please generate a key pair first.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // validate 
+            var isValid = ECDSAKeyHelper.ValidateECDsaKeyPair(GeneratedSignaturePublicKey, GeneratedSignaturePrivateKey);
+
+            if (!isValid)
+            {
+                MessageBox.Show("Validation failed.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var lastVersion = "1.0.0";
+            try
+            {
+                lastVersion = _dbContext.SignatureKeys.Max(x => x.Version);
+            }
+            catch (Exception ex)
+            {
+
+            }
+                
+            var currentVersion = IncreaseVersion(lastVersion);
+
+
+            int maxTries = 15;
+
+            for (int i = 0; i < maxTries; i++)
+            {
+                try
+                {
+                    var success = await UploadSignaturePublicKey(currentVersion);
+                    if (!success)
+                    {
+                        return;
+                    }
+                    break;
+                }
+                catch (KeyVersionExists kve)
+                {
+                    currentVersion = IncreaseVersion(currentVersion);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+            }
+
+            _dbContext.SignatureKeys.ToList().ForEach(x => x.IsActive = false);
+
+            _dbContext.SignatureKeys.Add(new SignatureKey
+            {
+                Version = currentVersion,
+                Key = GeneratedSignaturePrivateKey,
+                IsActive = true,
+                CreatedAt = DateTime.Now,
+            });
+
+            _dbContext.SaveChanges();
+            SignatureKeys = new ObservableCollection<SignatureKey>(_dbContext.SignatureKeys.Select(pk => new SignatureKey
+            {
+                Id = pk.Id,
+                Version = pk.Version,
+                CreatedAt = pk.CreatedAt,
+                IsActive = pk.IsActive,
+            }));
+
+            // Call service to upload and activate the key (implement service logic)
+            MessageBox.Show("Public key activated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private async Task UploadAndSaveToDatabase()
@@ -508,7 +660,15 @@ namespace StandardApiFrameworkTool.ViewModels
                 return;
             }
 
-            var lastVersion = _dbContext.PrivateKeys.Max(x => x.Version);
+            var lastVersion = "1.0.0";
+            try
+            {
+                lastVersion = _dbContext.PrivateKeys.Max(x => x.Version);
+            }
+            catch (Exception ex)
+            {
+
+            }
             var currentVersion = IncreaseVersion(lastVersion);
 
 
@@ -518,7 +678,11 @@ namespace StandardApiFrameworkTool.ViewModels
             {
                 try
                 {
-                    await UploadPublicKey(currentVersion);
+                    var success = await UploadPublicKey(currentVersion);
+                    if (!success)
+                    {
+                        return;
+                    }
                     break;
                 }
                 catch(KeyVersionExists kve)
@@ -589,30 +753,56 @@ namespace StandardApiFrameworkTool.ViewModels
             }
         }
 
-
-        private async Task UploadPublicKey(string version)
+        private async Task<bool> UploadSignaturePublicKey(string version)
         {
             var profile = _dbContext.Profiles.FirstOrDefault();
             if (profile == null)
             {
                 MessageBox.Show("Profile information is missing. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
+                return false;
             }
 
             var environment = _dbContext.EnvironmentSettings.FirstOrDefault(e => e.EnvironmentName == profile.SelectedEnvironment);
             if (environment == null)
             {
                 MessageBox.Show("Environment not found. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
+                return false;
+            }
+
+
+            var certificate = GetClientCertificate();
+            string baseAddress = environment.ServicesApiUrl;
+
+            var keyId = await PublicKeyStoreService.UploadPublicKey(baseAddress, GeneratedSignaturePublicKey, version, 365, "signature", certificate);
+
+            await PublicKeyStoreService.ActivatePublicKey(baseAddress, keyId.ToString(), certificate);
+            return true;
+        }
+
+        private async Task<bool> UploadPublicKey(string version)
+        {
+            var profile = _dbContext.Profiles.FirstOrDefault();
+            if (profile == null)
+            {
+                MessageBox.Show("Profile information is missing. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+
+            var environment = _dbContext.EnvironmentSettings.FirstOrDefault(e => e.EnvironmentName == profile.SelectedEnvironment);
+            if (environment == null)
+            {
+                MessageBox.Show("Environment not found. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
             }
             
 
             var certificate = GetClientCertificate();
             string baseAddress = environment.ServicesApiUrl;
             
-            var keyId = await PublicKeyStoreService.UploadPublicKey(baseAddress, GeneratedPublicKey, version, 365, certificate);
+            var keyId = await PublicKeyStoreService.UploadPublicKey(baseAddress, GeneratedPublicKey, version, 365, "encryption", certificate);
 
             await PublicKeyStoreService.ActivatePublicKey(baseAddress, keyId.ToString() , certificate);
+            return true;
         }
 
         private X509Certificate2 GetClientCertificate()

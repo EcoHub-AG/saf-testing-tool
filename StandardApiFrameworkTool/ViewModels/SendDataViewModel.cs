@@ -20,6 +20,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
 using System.Text;
+using System.Text.Unicode;
 
 namespace StandardApiFrameworkTool.ViewModels
 {
@@ -186,6 +187,23 @@ namespace StandardApiFrameworkTool.ViewModels
 
         public ICommand EncryptContentCommand { get; }
 
+        private string _signatureContent;
+
+        public string SignatureContent
+        {
+            get { return _signatureContent; }
+            set { _signatureContent = value; OnPropertyChanged(nameof(SignatureContent)); }
+        }
+
+        private string _messageHash;
+
+        public string MessageHash
+        {
+            get { return _messageHash; }
+            set { _messageHash = value; OnPropertyChanged(nameof(MessageHash)); }
+        }
+
+
 
         // methods
 
@@ -247,6 +265,8 @@ namespace StandardApiFrameworkTool.ViewModels
 
                 // Encrypt the content
                 EncryptContentWithPublicKey(publicKeyInfo.Key);
+
+                SignPayload();
             }
             catch (Exception ex)
             {
@@ -257,6 +277,38 @@ namespace StandardApiFrameworkTool.ViewModels
             {
                 ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
             });
+        }
+
+        private void SignPayload()
+        {
+            // Manually hash the message
+            byte[] hashBytes;
+            using (var sha384 = SHA384.Create())
+            {
+                hashBytes = sha384.ComputeHash(Encoding.UTF8.GetBytes(InputContent));
+            }
+            MessageHash = Convert.ToBase64String(hashBytes);
+
+            var signKey = _dbContext.SignatureKeys.FirstOrDefault(s => s.IsActive);
+
+            if(signKey == null)
+            {
+                MessageBox.Show("No Signing Key found.");
+                return;
+            }
+
+            // Load private key
+            using var ecdsa = ECDsa.Create();
+            ecdsa.ImportFromPem(signKey.Key.ToCharArray());
+
+            // Convert payload to bytes
+            byte[] payloadBytes = Encoding.UTF8.GetBytes(InputContent);
+
+            // Hash and sign the data
+            byte[] signature = ecdsa.SignData(payloadBytes, HashAlgorithmName.SHA384);
+
+            
+            SignatureContent =  Convert.ToBase64String(signature);
         }
 
         private void EncryptContentWithPublicKey(string publicKey)
@@ -481,7 +533,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
             // Kafka configuration details fetched from the DB
             string bootstrapServers = $"{env.CsmHost}:9092";  // Example, use the database entry for CsmHost
-            string topic = "eh.saf.in";  // The topic you want to send the message to
+            string topic = "eh.saf.in.v1";  // The topic you want to send the message to
 
             // Kafka producer configuration
             var config = new ProducerConfig

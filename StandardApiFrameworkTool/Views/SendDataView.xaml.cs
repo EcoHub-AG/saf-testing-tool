@@ -64,5 +64,23 @@ namespace StandardApiFrameworkTool.Views
                 TextEditorHelper.SetBoundText(editor, string.Empty);
             }
         }
+
+        private void MessageHashEditor_Loaded(object sender, RoutedEventArgs e)
+        {
+            var vm = (SendDataViewModel)this.DataContext;
+            if (sender is TextEditor editor && string.IsNullOrEmpty(vm.MessageHash))
+            {
+                TextEditorHelper.SetBoundText(editor, string.Empty);
+            }
+        }
+
+        private void SignatureContentEditor_Loaded(object sender, RoutedEventArgs e)
+        {
+            var vm = (SendDataViewModel)this.DataContext;
+            if (sender is TextEditor editor && string.IsNullOrEmpty(vm.SignatureContent))
+            {
+                TextEditorHelper.SetBoundText(editor, string.Empty);
+            }
+        }
     }
 }

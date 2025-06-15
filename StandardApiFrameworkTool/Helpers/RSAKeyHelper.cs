@@ -13,13 +13,16 @@ namespace StandardApiFrameworkTool.Helpers
         {
             using (var rsa = RSA.Create(2048))
             {
-                // Export keys in PEM format
-                string publicKeyPem = rsa.ExportRSAPublicKeyPem();
+                // Export public key in SPKI format
+                string publicKeyPem = rsa.ExportSubjectPublicKeyInfoPem();
+
+                // Export private key in PKCS#8 format
                 string privateKeyPem = rsa.ExportPkcs8PrivateKeyPem();
 
                 return (publicKeyPem, privateKeyPem);
             }
         }
+
 
 
         public static bool ValidateKeyPair(string publicKeyPem, string privateKeyPem)

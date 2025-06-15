@@ -13,6 +13,7 @@ namespace StandardApiFrameworkTool
         public DbSet<EnvironmentSetting> EnvironmentSettings { get; set; }
         public DbSet<Profile> Profiles { get; set; }
         public DbSet<PrivateKey> PrivateKeys { get; set; }
+        public DbSet<SignatureKey> SignatureKeys { get; set; }
         public DbSet<TechUser> TechUsers { get; set; }
         public DbSet<PublicKeyStore> PublicKeyStores { get; set; }
 
@@ -86,6 +87,26 @@ namespace StandardApiFrameworkTool
                 .IsRequired();
 
             modelBuilder.Entity<PrivateKey>()
+                .Property(pk => pk.IsActive)
+                .IsRequired();
+
+            // SignatureKey configuration
+            modelBuilder.Entity<SignatureKey>()
+                .HasKey(pk => pk.Id);
+
+            modelBuilder.Entity<SignatureKey>()
+                .Property(pk => pk.Key)
+                .IsRequired(false);
+
+            modelBuilder.Entity<SignatureKey>()
+                .Property(pk => pk.Version)
+                .IsRequired();
+
+            modelBuilder.Entity<SignatureKey>()
+                .Property(pk => pk.CreatedAt)
+                .IsRequired();
+
+            modelBuilder.Entity<SignatureKey>()
                 .Property(pk => pk.IsActive)
                 .IsRequired();
 
@@ -175,6 +196,15 @@ namespace StandardApiFrameworkTool
     }
 
     public class PrivateKey
+    {
+        public int Id { get; set; }
+        public string Key { get; set; }
+        public string Version { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    public class SignatureKey
     {
         public int Id { get; set; }
         public string Key { get; set; }

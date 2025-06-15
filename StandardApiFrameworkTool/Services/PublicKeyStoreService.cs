@@ -47,9 +47,10 @@ namespace StandardApiFrameworkTool.Services
             string key,
             string version,
             int expireInDays,
+            string keyType,
             X509Certificate2 certificate)
         {
-            string apiUrl = $"{baseAddress}/publickeystore/keys";
+            string apiUrl = $"{baseAddress}/publickeystore/v1/keys";
 
             HttpClientHandler handler = new HttpClientHandler
             {
@@ -61,9 +62,10 @@ namespace StandardApiFrameworkTool.Services
             {
                 version,
                 key,
-                expireInDays
+                expireInDays,
+                keyType
             };
-            var content = new StringContent(JsonConvert.SerializeObject(reqBody), System.Text.Encoding.UTF8, "application/json");
+            var content = new StringContent(JsonConvert.SerializeObject(new List<object>() { reqBody }), System.Text.Encoding.UTF8, "application/json");
 
             handler.ClientCertificates.Add(certificate);
 
@@ -74,8 +76,8 @@ namespace StandardApiFrameworkTool.Services
 
                 if (response.IsSuccessStatusCode)
                 {
-                    var pkiDetails = JsonConvert.DeserializeObject<PublicKeyDetails>(responseBody);
-                    return pkiDetails.KeyId;
+                    var pkiDetails = JsonConvert.DeserializeObject<List<PublicKeyDetails>>(responseBody);
+                    return pkiDetails.FirstOrDefault().KeyId;
                 }
                 else
                 {
@@ -102,7 +104,7 @@ namespace StandardApiFrameworkTool.Services
             string keyId,
             X509Certificate2 certificate)
         {
-            string apiUrl = $"{baseAddress}/publickeystore/keys/{keyId}/activate";
+            string apiUrl = $"{baseAddress}/publickeystore/v1/keys/{keyId}/activate";
 
             HttpClientHandler handler = new HttpClientHandler
             {

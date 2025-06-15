@@ -76,43 +76,97 @@
                 VerticalAlignment="Stretch"
                 Grid.Row="1" />
 
-                        <!-- Encrypted AES Key Label -->
-                        <TextBlock Text="Encrypted AES Key:" 
-                       FontWeight="SemiBold" 
-                       Grid.Row="2" />
+                        <Grid Grid.Row="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="auto"></RowDefinition>
+                                <RowDefinition Height="auto"></RowDefinition>
+                                <RowDefinition Height="auto"></RowDefinition>
+                                <RowDefinition Height="auto"></RowDefinition>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="0.5*"></ColumnDefinition>
+                                <ColumnDefinition Width="0.5*"></ColumnDefinition>
+                            </Grid.ColumnDefinitions>
+                            
+                            <!--#region Encryption Key-->
+                            <!-- Encrypted AES Key Label -->
+                            <TextBlock Text="Encrypted AES Key:" 
+                               FontWeight="SemiBold" 
+                               Grid.Row="0" />
 
-                        <!-- Encrypted AES Key Text -->
-                        <avalonedit:TextEditor
-                            Name="EncryptedAESKeyEditor"
-                       FontSize="14" 
-                       Margin="0,5,0,10" 
-                       FontFamily="Consolas"
-                    IsReadOnly="True"
-                    ShowLineNumbers="True"
-                    Loaded="EncryptedAESKeyEditor_Loaded"
-                    local:TextEditorHelper.BoundText="{Binding EncryptedAESKey, UpdateSourceTrigger=PropertyChanged}" 
-                    HorizontalAlignment="Stretch" 
-                    VerticalAlignment="Stretch"
-                       Grid.Row="3" />
+                            <!-- Encrypted AES Key Text -->
+                            <avalonedit:TextEditor Name="EncryptedAESKeyEditor"
+                                   FontSize="14" 
+                                   Margin="0,5,0,10" 
+                                   FontFamily="Consolas"
+                                IsReadOnly="True"
+                                ShowLineNumbers="True"
+                                Loaded="EncryptedAESKeyEditor_Loaded"
+                                local:TextEditorHelper.BoundText="{Binding EncryptedAESKey, UpdateSourceTrigger=PropertyChanged}" 
+                                HorizontalAlignment="Stretch" 
+                                VerticalAlignment="Stretch"
+                                   Grid.Row="1" />
 
-                        <!-- Encrypted Content Label -->
-                        <TextBlock Text="Encrypted Content:" 
-                       FontWeight="SemiBold" 
-                       Grid.Row="4" />
+                            <!-- Encrypted Content Label -->
+                            <TextBlock Text="Encrypted Content:" 
+                                FontWeight="SemiBold" 
+                                Grid.Row="2" />
 
-                        <!-- Encrypted Content Editor -->
-                        <avalonedit:TextEditor 
-                Name="EncryptedContentEditor"
-                FontFamily="Consolas"
-                FontSize="14"
-                IsReadOnly="True"
-                ShowLineNumbers="True"
-                Loaded="EncryptedContentEditor_Loaded"
-                Margin="0,5,0,10"
-                local:TextEditorHelper.BoundText="{Binding EncryptedContent, UpdateSourceTrigger=PropertyChanged}" 
-                HorizontalAlignment="Stretch" 
-                VerticalAlignment="Stretch"
-                Grid.Row="5" />
+                            <!-- Encrypted Content Editor -->
+                            <avalonedit:TextEditor Name="EncryptedContentEditor"
+                                FontFamily="Consolas"
+                                FontSize="14"
+                                IsReadOnly="True"
+                                ShowLineNumbers="True"
+                                Loaded="EncryptedContentEditor_Loaded"
+                                Margin="0,5,0,10"
+                                local:TextEditorHelper.BoundText="{Binding EncryptedContent, UpdateSourceTrigger=PropertyChanged}" 
+                                HorizontalAlignment="Stretch" 
+                                VerticalAlignment="Stretch"
+                                Grid.Row="3" />
+                            <!--#endregion-->
+                            
+                            <!--#region Signature Key-->
+                            <!-- Signature Key Label -->
+                            <TextBlock Text="Message Hash:" 
+                                FontWeight="SemiBold" 
+                                Grid.Row="0" Grid.Column="1"/>
+
+                            <!-- Message Hash Text -->
+                            <avalonedit:TextEditor Name="MessageHashEditor"
+                                   FontSize="14" 
+                                   Margin="0,5,0,10" 
+                                   FontFamily="Consolas"
+                                IsReadOnly="True"
+                                ShowLineNumbers="True"
+                                Loaded="MessageHashEditor_Loaded"
+                                local:TextEditorHelper.BoundText="{Binding MessageHash, UpdateSourceTrigger=PropertyChanged}" 
+                                HorizontalAlignment="Stretch" 
+                                VerticalAlignment="Stretch"
+                                   Grid.Row="1" Grid.Column="1" />
+
+                            <!-- Signature Label -->
+                            <TextBlock Text="Signature:" 
+                                FontWeight="SemiBold" 
+                                Grid.Row="2" Grid.Column="1" />
+
+                            <!-- Signature Content Editor -->
+                            <avalonedit:TextEditor Name="SignatureContentEditor"
+                                FontFamily="Consolas"
+                                FontSize="14"
+                                IsReadOnly="True"
+                                ShowLineNumbers="True"
+                                Loaded="SignatureContentEditor_Loaded"
+                                Margin="0,5,0,10"
+                                local:TextEditorHelper.BoundText="{Binding SignatureContent, UpdateSourceTrigger=PropertyChanged}" 
+                                HorizontalAlignment="Stretch" 
+                                VerticalAlignment="Stretch"
+                                Grid.Row="3" Grid.Column="1"/>
+                            
+                            <!--#endregion-->
+
+                        </Grid>
+                        
 
                         <!-- Zip & Encrypt Button -->
                         <Button Content="Zip &amp; Encrypt"

@@ -105,6 +105,98 @@
             </controls:Step>
             <controls:Step>
                 <controls:Step.Header>
+                    <controls:StepTitleHeader FirstLevelTitle="Signature" SecondLevelTitle="Manage your private keys" />
+                </controls:Step.Header>
+                <controls:Step.Content>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <!-- Title -->
+                            <RowDefinition Height="5*" />
+                            <!-- Public Keys Table -->
+                            <RowDefinition Height="5*" />
+                            <!-- Create Key Pair Section -->
+                        </Grid.RowDefinitions>
+
+                        <!-- Title -->
+                        <TextBlock Text="Manage Private Keys (Signature)" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,10" Grid.Row="0" />
+
+                        <!-- Public Keys Table -->
+                        <DataGrid Grid.Row="1" ItemsSource="{Binding SignatureKeys}"
+                      AutoGenerateColumns="False" 
+                      CanUserAddRows="False" CanUserDeleteRows="False" IsReadOnly="True" Margin="0,10,0,10">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Key ID" Binding="{Binding Id}" Width="*"/>
+                                <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="*"/>
+                                <DataGridTextColumn Header="Created At" Binding="{Binding CreatedAt, StringFormat=d}" Width="*"/>
+                                <DataGridTemplateColumn Header="Active" Width="Auto">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Ellipse Width="15" Height="15" Fill="{Binding IsActive, Converter={StaticResource BoolToBrushConverter}}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <!-- Create Key Pair Section -->
+                        <Grid Grid.Row="2" Margin="0,10,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="auto"></RowDefinition>
+                                <RowDefinition Height="8*"></RowDefinition>
+                                <RowDefinition Height="2*"></RowDefinition>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition></ColumnDefinition>
+                                <ColumnDefinition></ColumnDefinition>
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Text="Generated Key Pair:" FontWeight="SemiBold" FontSize="13" Grid.Row="0"/>
+                            <avalonedit:TextEditor 
+                    Name="SignaturePublicKeyEditor"
+                    FontFamily="Consolas"
+                    FontSize="12"
+                    Grid.Row="1"
+                    Grid.Column="0"
+                    ShowLineNumbers="True"
+                    Margin="0,5,0,10"
+                    helpers:TextEditorHelper.BoundText="{Binding GeneratedSignaturePublicKey, UpdateSourceTrigger=PropertyChanged}"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch" />
+
+                            <avalonedit:TextEditor 
+                    Name="SignaturePrivateKeyEditor"
+                    FontFamily="Consolas"
+                    FontSize="12"
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    ShowLineNumbers="True"
+                    Margin="0,5,0,10"
+                    helpers:TextEditorHelper.BoundText="{Binding GeneratedSignaturePrivateKey, UpdateSourceTrigger=PropertyChanged}"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch" />
+
+
+                            <!-- Action Buttons -->
+                            <Grid HorizontalAlignment="Left"  Grid.Row="2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition></ColumnDefinition>
+                                    <ColumnDefinition></ColumnDefinition>
+                                </Grid.ColumnDefinitions>
+
+                                <Button Content="Create Key Pair" Margin="0,0,10,0"
+                        Command="{Binding GenerateSignatureKeyPairCommand}" 
+                         />
+                                <Button Content="Validate &amp; Activate Key" Grid.Column="1"
+                        Command="{Binding ActivateSignatureKeyCommand}"
+                        />
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                </controls:Step.Content>
+            </controls:Step>
+            <controls:Step>
+                <controls:Step.Header>
                     <controls:StepTitleHeader FirstLevelTitle="Received Events" />
                 </controls:Step.Header>
                 <controls:Step.Content>
