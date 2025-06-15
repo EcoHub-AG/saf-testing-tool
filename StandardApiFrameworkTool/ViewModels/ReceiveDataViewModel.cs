@@ -283,7 +283,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
         private string DecryptAndUnZip(string content)
         {
-            OfferNLPIEventType offerNlpi;
+            SafEventType offerNlpi;
             try
             {
                 string pattern = @"\{.*\}";
@@ -294,7 +294,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 if (match.Success)
                 {
                     string json = match.Value;
-                    offerNlpi = JsonConvert.DeserializeObject<OfferNLPIEventType>(json);
+                    offerNlpi = JsonConvert.DeserializeObject<SafEventType>(json);
                 }
                 else
                 {
@@ -349,7 +349,7 @@ namespace StandardApiFrameworkTool.ViewModels
         }
 
         // Method to decrypt the AES key using the private RSA key
-        private byte[] DecryptAESKeyWithPrivateKey(byte[] encryptedAesKey, OfferNLPIEventType offerNLPI)
+        private byte[] DecryptAESKeyWithPrivateKey(byte[] encryptedAesKey, SafEventType offerNLPI)
         {
             try
             {

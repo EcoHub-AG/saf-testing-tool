@@ -456,14 +456,14 @@ namespace StandardApiFrameworkTool.ViewModels
 
 
             // Initialize the model with the values directly
-            var offerNLPIEvent = new OfferNLPIEventType
+            var offerNLPIEvent = new SafEventType
             {
                 Id = Guid.NewGuid().ToString(),
                 Source = "http://www.myecohub.ch/",
                 Specversion = "1.0",
-                Type = "data",
+                Type = "ch.ecohub.saf.data",
                 DataContentType = "application/json",
-                DataSchema = "http://www.myecohub.ch/ib2b/offer/nlpi/v0.2.0",
+                DataSchema = "https://raw.githubusercontent.com/EcoHub-AG/Standards/refs/tags/Offer_NLPI_v0.3.0/schemas/Offer-NLPI/v0.3.0/offer-nlpi-root/OfferNlpiRequestDataType.json",
                 Subject = "Test subject",
                 Time = DateTime.UtcNow.ToString("yyyy-MM-ddThh:mm:ss.fffZ"),
                 Data = new Data
@@ -472,6 +472,8 @@ namespace StandardApiFrameworkTool.ViewModels
                     Links = new List<Links>(), // Empty list, as per the provided JSON
                     EncryptionKey = EncryptedAESKey,
                     PublicKeyVersion = publicKeyInfo.version,
+                    PayloadSignature = SignatureContent,
+                    SignatureKeyVersion = _dbContext.SignatureKeys.FirstOrDefault(s => s.IsActive).Version,
                 },
                 LicenceKey = profile.LicenseKey,
                 UserAgent = new UserAgent
@@ -490,6 +492,7 @@ namespace StandardApiFrameworkTool.ViewModels
                     Id = profile.IdpNumber.ToString(),
                 },
                 ProcessId = Guid.NewGuid().ToString(),
+                ProcessGroupId = Guid.NewGuid().ToString(),
                 ProcessStatus = "active",
                 SubProcessName = "request",
                 ProcessName = "offer.nlpi",
@@ -556,14 +559,14 @@ namespace StandardApiFrameworkTool.ViewModels
             try
             {
                 // Parse the JSON input
-                var myEvent = Newtonsoft.Json.JsonConvert.DeserializeObject<OfferNLPIEventType>(PayloadContent);
+                var myEvent = Newtonsoft.Json.JsonConvert.DeserializeObject<SafEventType>(PayloadContent);
 
                 var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig);
 
 
                 // Create the Kafka producer
-                using var producer = new ProducerBuilder<ProcessIdType, OfferNLPIEventType>(config)
-                    .SetValueSerializer(new JsonSerializer<OfferNLPIEventType>(schemaRegistry, new JsonSerializerConfig
+                using var producer = new ProducerBuilder<ProcessIdType, SafEventType>(config)
+                    .SetValueSerializer(new JsonSerializer<SafEventType>(schemaRegistry, new JsonSerializerConfig
                     {
                         BufferBytes = 100,
                         UseLatestVersion = true,
@@ -579,7 +582,7 @@ namespace StandardApiFrameworkTool.ViewModels
                     .Build();
 
                 // Create a message to send
-                var message = new Message<ProcessIdType, OfferNLPIEventType>
+                var message = new Message<ProcessIdType, SafEventType>
                 {
                     Key = new ProcessIdType { ProcessId = Guid.Parse(myEvent.ProcessId) },
                     Value = myEvent
@@ -594,7 +597,7 @@ namespace StandardApiFrameworkTool.ViewModels
             {
                 MessageBox.Show($"Invalid JSON format: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-            catch (ProduceException<ProcessIdType, OfferNLPIEventType> ex)
+            catch (ProduceException<ProcessIdType, SafEventType> ex)
             {
                 MessageBox.Show($"Kafka error: {ex.Error.Reason}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }

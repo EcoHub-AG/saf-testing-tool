@@ -21,8 +21,8 @@ namespace StandardApiFrameworkTool.Models
         [JsonProperty("payload", NullValueHandling = NullValueHandling.Ignore)]
         public string Payload { get; set; }
 
-        [JsonProperty("md5PayloadHash", NullValueHandling = NullValueHandling.Ignore)]
-        public string Md5PayloadHash { get; set; }
+        [JsonProperty("payLoadSignature", NullValueHandling = NullValueHandling.Ignore)]
+        public string PayloadSignature { get; set; }
 
         [JsonProperty("links", NullValueHandling = NullValueHandling.Ignore)]
         public List<Links> Links { get; set; }
@@ -33,11 +33,8 @@ namespace StandardApiFrameworkTool.Models
         [JsonProperty("publicKeyVersion", NullValueHandling = NullValueHandling.Ignore)]
         public string PublicKeyVersion { get; set; }
 
-        [JsonProperty("message", NullValueHandling = NullValueHandling.Ignore)]
-        public string Message { get; set; }
-
-        [JsonProperty("md5MessageHash", NullValueHandling = NullValueHandling.Ignore)]
-        public string Md5MessageHash { get; set; }
+        [JsonProperty("signatureKeyVersion", NullValueHandling = NullValueHandling.Ignore)]
+        public string SignatureKeyVersion { get; set; }
     }
 
     public class UserAgent
@@ -67,7 +64,7 @@ namespace StandardApiFrameworkTool.Models
         public string Id { get; set; }
     }
 
-    public class OfferNLPIEventType
+    public class SafEventType
     {
         [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
         public string Id { get; set; }
@@ -113,6 +110,9 @@ namespace StandardApiFrameworkTool.Models
 
         [JsonProperty("processId", NullValueHandling = NullValueHandling.Ignore)]
         public string ProcessId { get; set; }
+
+        [JsonProperty("processGroupId", NullValueHandling = NullValueHandling.Ignore)]
+        public string ProcessGroupId { get; set; }
 
         [JsonProperty("processStatus", NullValueHandling = NullValueHandling.Ignore)]
         public string ProcessStatus { get; set; }
