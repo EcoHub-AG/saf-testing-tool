@@ -1,0 +1,138 @@
+﻿using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+
+namespace StandardApiFrameworkTool.Models
+{
+    public class Links
+    {
+        [JsonProperty("href", NullValueHandling = NullValueHandling.Ignore)]
+        public string Href { get; set; }
+
+        [JsonProperty("rel", NullValueHandling = NullValueHandling.Ignore)]
+        public string Rel { get; set; }
+
+        [JsonProperty("description", NullValueHandling = NullValueHandling.Ignore)]
+        public string Description { get; set; }
+    }
+
+    public class Data
+    {
+        [JsonProperty("payload", NullValueHandling = NullValueHandling.Ignore)]
+        public string Payload { get; set; }
+
+        [JsonProperty("md5PayloadHash", NullValueHandling = NullValueHandling.Ignore)]
+        public string Md5PayloadHash { get; set; }
+
+        [JsonProperty("links", NullValueHandling = NullValueHandling.Ignore)]
+        public List<Links> Links { get; set; }
+
+        [JsonProperty("encryptionKey", NullValueHandling = NullValueHandling.Ignore)]
+        public string EncryptionKey { get; set; }
+
+        [JsonProperty("publicKeyVersion", NullValueHandling = NullValueHandling.Ignore)]
+        public string PublicKeyVersion { get; set; }
+
+        [JsonProperty("message", NullValueHandling = NullValueHandling.Ignore)]
+        public string Message { get; set; }
+
+        [JsonProperty("md5MessageHash", NullValueHandling = NullValueHandling.Ignore)]
+        public string Md5MessageHash { get; set; }
+
+        [JsonProperty("errorCode", NullValueHandling = NullValueHandling.Ignore)]
+        public string ErrorCode { get; set; }
+
+        [JsonProperty("errorDateTime", NullValueHandling = NullValueHandling.Ignore)]
+        public string ErrorDateTime { get; set; }
+
+        [JsonProperty("errorMessage", NullValueHandling = NullValueHandling.Ignore)]
+        public string ErrorMessage { get; set; }
+    }
+
+    public class UserAgent
+    {
+        [JsonProperty("name", NullValueHandling = NullValueHandling.Ignore)]
+        public string Name { get; set; }
+
+        [JsonProperty("version", NullValueHandling = NullValueHandling.Ignore)]
+        public string Version { get; set; }
+    }
+
+    public class EventReceiver
+    {
+        [JsonProperty("category", NullValueHandling = NullValueHandling.Ignore)]
+        public string Category { get; set; }
+
+        [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
+        public string Id { get; set; }
+    }
+
+    public class EventSender
+    {
+        [JsonProperty("category", NullValueHandling = NullValueHandling.Ignore)]
+        public string Category { get; set; }
+
+        [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
+        public string Id { get; set; }
+    }
+
+    public class CommonEventType
+    {
+        [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
+        public string Id { get; set; }
+
+        [JsonProperty("source", NullValueHandling = NullValueHandling.Ignore)]
+        public string Source { get; set; }
+
+        [JsonProperty("specversion", NullValueHandling = NullValueHandling.Ignore)]
+        public string Specversion { get; set; }
+
+        [JsonProperty("type", NullValueHandling = NullValueHandling.Ignore)]
+        public string Type { get; set; }
+
+        [JsonProperty("datacontenttype", NullValueHandling = NullValueHandling.Ignore)]
+        public string DataContentType { get; set; }
+
+        [JsonProperty("dataschema", NullValueHandling = NullValueHandling.Ignore)]
+        public string DataSchema { get; set; }
+
+        [JsonProperty("subject", NullValueHandling = NullValueHandling.Ignore)]
+        public string Subject { get; set; }
+
+        [JsonProperty("time", NullValueHandling = NullValueHandling.Ignore)]
+        public string Time { get; set; }
+
+        [JsonProperty("data", NullValueHandling = NullValueHandling.Ignore)]
+        public Data Data { get; set; }
+
+        [JsonProperty("dataBase64", NullValueHandling = NullValueHandling.Ignore)]
+        public string DataBase64 { get; set; }
+
+        [JsonProperty("licenceKey", NullValueHandling = NullValueHandling.Ignore)]
+        public string LicenceKey { get; set; }
+
+        [JsonProperty("userAgent", NullValueHandling = NullValueHandling.Ignore)]
+        public UserAgent UserAgent { get; set; }
+
+        [JsonProperty("eventReceiver", NullValueHandling = NullValueHandling.Ignore)]
+        public EventReceiver EventReceiver { get; set; }
+
+        [JsonProperty("eventSender", NullValueHandling = NullValueHandling.Ignore)]
+        public EventSender EventSender { get; set; }
+
+        [JsonProperty("processId", NullValueHandling = NullValueHandling.Ignore)]
+        public string ProcessId { get; set; }
+
+        [JsonProperty("processStatus", NullValueHandling = NullValueHandling.Ignore)]
+        public string ProcessStatus { get; set; }
+
+        [JsonProperty("subProcessName", NullValueHandling = NullValueHandling.Ignore)]
+        public string SubProcessName { get; set; }
+
+        [JsonProperty("processName", NullValueHandling = NullValueHandling.Ignore)]
+        public string ProcessName { get; set; }
+
+        [JsonProperty("subProcessStatus", NullValueHandling = NullValueHandling.Ignore)]
+        public string SubProcessStatus { get; set; }
+    }
+}

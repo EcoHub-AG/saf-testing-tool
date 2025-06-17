@@ -1,0 +1,99 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Mono Auto Generated Files
+mono_crash.*
+
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# Folders for Visual Studio Code workspace and debugging
+.vscode/
+.vs/
+.vscode-test/
+
+# Dependency directories
+node_modules/
+bower_components/
+
+# Logs
+*.log
+
+# Application Insights
+ApplicationInsights.config
+ApplicationInsightsTelemetry.config
+
+# Temporary files
+*.tmp
+*.temp
+*.pid
+*.swp
+*.swo
+*.DS_Store
+
+# Resharper files
+_ReSharper*/
+*.DotSettings.user
+
+# Rider files
+.idea/
+
+# JetBrains Rider
+.idea/
+*.iml
+*.iws
+
+# DotCover coverage results
+*.dcov
+
+# Visual Studio temporary files
+*.dbmdl
+*.pdb
+*.obj
+
+# Visual Studio Code Coverage
+*.coverage
+*.coveragexml
+
+# Publish artifacts
+publish/
+*.publishsettings
+*.deploy.cmd
+*.SourceSettings
+*.Publish.xml
+*.deploy
+
+# Packages
+packages/
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Configuration files
+*.config
+
+# Entity Framework migrations
+migrations/
+
+# LocalDB
+*.mdf
+*.ldf
+*.ndf
+
+# WPF-specific files
+*.g.*
+*.i.*
+*.sdf
+
+# Byebug
+.byebug_history
