@@ -64,7 +64,7 @@ namespace StandardApiFrameworkTool.Models
         public string Id { get; set; }
     }
 
-    public class SafEventType
+    public class CommonEventType
     {
         [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
         public string Id { get; set; }

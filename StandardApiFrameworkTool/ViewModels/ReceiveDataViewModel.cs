@@ -283,7 +283,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
         private string DecryptAndUnZip(string content)
         {
-            SafEventType offerNlpi;
+            CommonEventType offerNlpi;
             try
             {
                 string pattern = @"\{.*\}";
@@ -294,7 +294,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 if (match.Success)
                 {
                     string json = match.Value;
-                    offerNlpi = JsonConvert.DeserializeObject<SafEventType>(json);
+                    offerNlpi = JsonConvert.DeserializeObject<CommonEventType>(json);
                 }
                 else
                 {
@@ -306,50 +306,50 @@ namespace StandardApiFrameworkTool.ViewModels
                 return "Event Deserialize failed";
             }
 
-            if(offerNlpi.Data == null)
+            if (offerNlpi.Data?.Payload != null)
             {
-                return content;
-            }
-
-            try
-            {
-                // 1. Retrieve and decrypt the AES key using the private RSA key
-                string encryptedAesKeyBase64 = offerNlpi.Data.EncryptionKey; // The encrypted AES key
-                byte[] encryptedAesKey = Convert.FromBase64String(encryptedAesKeyBase64);
-
-                byte[] aesKey = DecryptAESKeyWithPrivateKey(encryptedAesKey, offerNlpi);
-
-                if (aesKey == null)
+                try
                 {
-                    MessageBox.Show("Failed to decrypt AES key.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return "Failed to decrypt AES key.";
+                    // 1. Retrieve and decrypt the AES key using the private RSA key
+                    string encryptedAesKeyBase64 = offerNlpi.Data.EncryptionKey; // The encrypted AES key
+                    byte[] encryptedAesKey = Convert.FromBase64String(encryptedAesKeyBase64);
+
+                    byte[] aesKey = DecryptAESKeyWithPrivateKey(encryptedAesKey, offerNlpi);
+
+                    if (aesKey == null)
+                    {
+                        MessageBox.Show("Failed to decrypt AES key.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return "Failed to decrypt AES key.";
+                    }
+
+                    // 2. Retrieve the encrypted content (Base64 encoded)
+                    string encryptedBase64Content = offerNlpi.Data.Payload; // The encrypted content
+                    byte[] encryptedContent = Convert.FromBase64String(encryptedBase64Content);
+
+                    // 3. Decrypt the content with the decrypted AES key
+                    byte[] decryptedContent = DecryptWithAES(encryptedContent, aesKey);
+
+                    // 4. Unzip the decrypted content
+                    string unzippedContent = UnzipContent(decryptedContent);
+
+                    // 5. Display the unzipped content in the content editor
+
+                    offerNlpi.Data.Payload = unzippedContent;
+
+                    return JsonConvert.SerializeObject(offerNlpi);
                 }
-
-                // 2. Retrieve the encrypted content (Base64 encoded)
-                string encryptedBase64Content = offerNlpi.Data.Payload; // The encrypted content
-                byte[] encryptedContent = Convert.FromBase64String(encryptedBase64Content);
-
-                // 3. Decrypt the content with the decrypted AES key
-                byte[] decryptedContent = DecryptWithAES(encryptedContent, aesKey);
-
-                // 4. Unzip the decrypted content
-                string unzippedContent = UnzipContent(decryptedContent);
-
-                // 5. Display the unzipped content in the content editor
-
-                offerNlpi.Data.Payload = unzippedContent;
-
-                return JsonConvert.SerializeObject(offerNlpi);
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return ex.ToString();
+                }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return ex.ToString();
-            }
+
+            return content;
         }
 
         // Method to decrypt the AES key using the private RSA key
-        private byte[] DecryptAESKeyWithPrivateKey(byte[] encryptedAesKey, SafEventType offerNLPI)
+        private byte[] DecryptAESKeyWithPrivateKey(byte[] encryptedAesKey, CommonEventType offerNLPI)
         {
             try
             {

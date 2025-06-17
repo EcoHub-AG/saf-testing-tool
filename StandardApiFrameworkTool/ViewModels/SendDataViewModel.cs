@@ -22,6 +22,7 @@ using Confluent.SchemaRegistry.Serdes;
 using System.Text;
 using System.Text.Unicode;
 using System.Net.Http;
+using Newtonsoft.Json.Linq;
 
 namespace StandardApiFrameworkTool.ViewModels
 {
@@ -457,7 +458,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
 
             // Initialize the model with the values directly
-            var offerNLPIEvent = new SafEventType
+            var offerNLPIEvent = new CommonEventType
             {
                 Id = Guid.NewGuid().ToString(),
                 Source = "http://www.myecohub.ch/",
@@ -570,13 +571,13 @@ namespace StandardApiFrameworkTool.ViewModels
             try
             {
                 // Parse the JSON input
-                var myEvent = JsonConvert.DeserializeObject<SafEventType>(PayloadContent);
+                var myEvent = JsonConvert.DeserializeObject<CommonEventType>(PayloadContent);
 
                 var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig);
 
                 // Create the Kafka producer
-                using var producer = new ProducerBuilder<ProcessIdType, SafEventType>(config)
-                    .SetValueSerializer(new JsonSerializer<SafEventType>(schemaRegistry, new JsonSerializerConfig
+                using var producer = new ProducerBuilder<ProcessIdType, JObject>(config)
+                    .SetValueSerializer(new JsonSerializer<JObject>(schemaRegistry, new JsonSerializerConfig
                     {
                         BufferBytes = 100,
                         UseLatestVersion = true,
@@ -591,10 +592,10 @@ namespace StandardApiFrameworkTool.ViewModels
                     .Build();
 
                 // Create a message to send
-                var message = new Message<ProcessIdType, SafEventType>
+                var message = new Message<ProcessIdType, JObject>
                 {
                     Key = new ProcessIdType { ProcessId = Guid.Parse(myEvent.ProcessId) },
-                    Value = myEvent
+                    Value = JObject.Parse(PayloadContent)
                 };
 
                 // Send the message to the Kafka topic
@@ -606,7 +607,7 @@ namespace StandardApiFrameworkTool.ViewModels
             {
                 MessageBox.Show($"Invalid JSON format: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-            catch (ProduceException<ProcessIdType, SafEventType> ex)
+            catch (ProduceException<ProcessIdType, JObject> ex)
             {
                 MessageBox.Show($"Kafka error: {ex.Error.Reason}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
