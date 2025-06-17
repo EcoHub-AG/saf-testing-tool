@@ -144,7 +144,8 @@ namespace StandardApiFrameworkTool.ViewModels
                     {
                         OAuthClientId = response.oAuth2.clientId,
                         OAuthClientPassword = response.oAuth2.clientSecret,
-                        TechUserCert = response.techUserCert
+                        TechUserCert = response.techUserCert,
+                        OpenIdConfigurationEndpoint = response.oAuth2.openIdConfigurationEndpoint,
                     });
                     await _context.SaveChangesAsync();
 

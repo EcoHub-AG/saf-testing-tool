@@ -93,9 +93,6 @@ namespace StandardApiFrameworkTool.Models
         [JsonProperty("data", NullValueHandling = NullValueHandling.Ignore)]
         public Data Data { get; set; }
 
-        [JsonProperty("dataBase64", NullValueHandling = NullValueHandling.Ignore)]
-        public string DataBase64 { get; set; }
-
         [JsonProperty("licenceKey", NullValueHandling = NullValueHandling.Ignore)]
         public string LicenceKey { get; set; }
 

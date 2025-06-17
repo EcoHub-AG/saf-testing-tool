@@ -21,6 +21,7 @@ using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
 using System.Text;
 using System.Text.Unicode;
+using System.Net.Http;
 
 namespace StandardApiFrameworkTool.ViewModels
 {
@@ -473,7 +474,7 @@ namespace StandardApiFrameworkTool.ViewModels
                     EncryptionKey = EncryptedAESKey,
                     PublicKeyVersion = publicKeyInfo.version,
                     PayloadSignature = SignatureContent,
-                    SignatureKeyVersion = _dbContext.SignatureKeys.FirstOrDefault(s => s.IsActive).Version,
+                    SignatureKeyVersion = _dbContext.SignatureKeys.FirstOrDefault(s => s.IsActive)?.Version,
                 },
                 LicenceKey = profile.LicenseKey,
                 UserAgent = new UserAgent
@@ -537,6 +538,7 @@ namespace StandardApiFrameworkTool.ViewModels
             // Kafka configuration details fetched from the DB
             string bootstrapServers = $"{env.CsmHost}:9092";  // Example, use the database entry for CsmHost
             string topic = "eh.saf.in.v1";  // The topic you want to send the message to
+            
 
             // Kafka producer configuration
             var config = new ProducerConfig
@@ -548,21 +550,29 @@ namespace StandardApiFrameworkTool.ViewModels
                 //SslCaPem = caPem, // Uncomment if you need to use the CA PEM
             };
 
-            // Schema registry configuration (keep this unchanged or use DB if necessary)
+            var techUser = _dbContext.TechUsers.FirstOrDefault();
+            // We have already checked that techUser is not null in GetClientCertificate();
+
+
+            var pfxBytes = Convert.FromBase64String(techUser.TechUserCert);   // your string
+            var pfxPath = Path.Combine(Path.GetTempPath(),
+                                        $"{Guid.NewGuid():N}.pfx");
+            File.WriteAllBytes(pfxPath, pfxBytes);
+
             var schemaRegistryConfig = new SchemaRegistryConfig
             {
-                Url = "https://psrc-qrk9d.westeurope.azure.confluent.cloud:443",
-                BasicAuthUserInfo = "FCYTB2BG73BWKLZ5:juvZLo3Frvgoqn9Mb5dDJjaXx4NAYf1PwY+k5egoUBEHIYYCnmgzJE/M7uCCYjPv"
+                Url = env.ServicesApiUrl + "/schemaregistry",
+                SslKeystoreLocation = pfxPath,
+                SslKeystorePassword = _dbContext.Profiles.FirstOrDefault().Password,
             };
 
 
             try
             {
                 // Parse the JSON input
-                var myEvent = Newtonsoft.Json.JsonConvert.DeserializeObject<SafEventType>(PayloadContent);
+                var myEvent = JsonConvert.DeserializeObject<SafEventType>(PayloadContent);
 
                 var schemaRegistry = new CachedSchemaRegistryClient(schemaRegistryConfig);
-
 
                 // Create the Kafka producer
                 using var producer = new ProducerBuilder<ProcessIdType, SafEventType>(config)
@@ -571,13 +581,12 @@ namespace StandardApiFrameworkTool.ViewModels
                         BufferBytes = 100,
                         UseLatestVersion = true,
                         AutoRegisterSchemas = false,
-                        SubjectNameStrategy = SubjectNameStrategy.Topic
+                        SubjectNameStrategy = SubjectNameStrategy.Topic,
                     }))
-                    .SetKeySerializer(new JsonSerializer<ProcessIdType>(schemaRegistry, new JsonSerializerConfig
+                    .SetKeySerializer(new JsonSerializer<ProcessIdType>(schemaRegistry, new JsonSerializerConfig()
                     {
                         UseLatestVersion = true,
                         AutoRegisterSchemas = false,
-                        //SubjectNameStrategy = SubjectNameStrategy.Topic
                     }))
                     .Build();
 

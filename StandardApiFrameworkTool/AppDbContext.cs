@@ -126,6 +126,10 @@ namespace StandardApiFrameworkTool
                 .Property(tu => tu.OAuthClientPassword)
                 .IsRequired();
 
+            modelBuilder.Entity<TechUser>()
+                .Property(tu => tu.OpenIdConfigurationEndpoint)
+                .IsRequired();
+
             // PublicKeyStore configuration
             modelBuilder.Entity<PublicKeyStore>()
                 .HasKey(pk => pk.Id);
@@ -219,6 +223,7 @@ namespace StandardApiFrameworkTool
         public string TechUserCert { get; set; }
         public string OAuthClientId { get; set; }
         public string OAuthClientPassword { get; set; }
+        public string OpenIdConfigurationEndpoint { get; set; }
     }
 
     public class PublicKeyStore
