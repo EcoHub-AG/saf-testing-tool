@@ -11,7 +11,7 @@ namespace StandardApiFrameworkTool.Helpers
     {
         public static (string publicKeyPem, string privateKeyPem) GenerateECDsaKeyPair()
         {
-            using (var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP384))
+            using (var ecdsa = ECDsa.Create(ECCurve.NamedCurves.brainpoolP384r1))
             {
                 string publicKeyPem = ecdsa.ExportSubjectPublicKeyInfoPem();
                 string privateKeyPem = ecdsa.ExportPkcs8PrivateKeyPem();

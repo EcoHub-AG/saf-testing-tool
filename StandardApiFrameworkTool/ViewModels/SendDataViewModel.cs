@@ -307,7 +307,7 @@ namespace StandardApiFrameworkTool.ViewModels
             byte[] payloadBytes = Encoding.UTF8.GetBytes(InputContent);
 
             // Hash and sign the data
-            byte[] signature = ecdsa.SignData(payloadBytes, HashAlgorithmName.SHA384);
+            byte[] signature = ecdsa.SignData(payloadBytes, HashAlgorithmName.SHA384, DSASignatureFormat.Rfc3279DerSequence);
 
             
             SignatureContent =  Convert.ToBase64String(signature);
