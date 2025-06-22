@@ -11,7 +11,7 @@ namespace StandardApiFrameworkTool.Helpers
     {
         public static (string publicKeyPem, string privateKeyPem) GenerateECDsaKeyPair()
         {
-            using (var ecdsa = ECDsa.Create(ECCurve.NamedCurves.brainpoolP384r1))
+            using (var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP384))
             {
                 string publicKeyPem = ecdsa.ExportSubjectPublicKeyInfoPem();
                 string privateKeyPem = ecdsa.ExportPkcs8PrivateKeyPem();
@@ -35,10 +35,10 @@ namespace StandardApiFrameworkTool.Helpers
                 byte[] messageBytes = Encoding.UTF8.GetBytes(testMessage);
 
                 // Sign with private key
-                byte[] signature = ecdsaPrivate.SignData(messageBytes, HashAlgorithmName.SHA256);
+                byte[] signature = ecdsaPrivate.SignData(messageBytes, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence);
 
                 // Verify with public key
-                bool isValid = ecdsaPublic.VerifyData(messageBytes, signature, HashAlgorithmName.SHA256);
+                bool isValid = ecdsaPublic.VerifyData(messageBytes, signature, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence);
 
                 return isValid;
             }
