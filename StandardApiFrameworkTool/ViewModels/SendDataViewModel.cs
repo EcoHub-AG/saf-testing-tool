@@ -330,7 +330,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 // Import the public key directly using RSA class
                 rsa.ImportFromPem(publicKey.ToCharArray());
 
-                byte[] encryptedAesKey = rsa.Encrypt(aesKey, RSAEncryptionPadding.Pkcs1);
+                byte[] encryptedAesKey = rsa.Encrypt(aesKey, RSAEncryptionPadding.OaepSHA256);
 
                 EncryptedAESKey = Convert.ToBase64String(encryptedAesKey);
 

@@ -40,10 +40,10 @@ namespace StandardApiFrameworkTool.Helpers
                 string testMessage = "Test message for RSA key validation";
 
                 // Encrypt with public key
-                byte[] encryptedData = rsaPublic.Encrypt(Encoding.UTF8.GetBytes(testMessage), RSAEncryptionPadding.Pkcs1);
+                byte[] encryptedData = rsaPublic.Encrypt(Encoding.UTF8.GetBytes(testMessage), RSAEncryptionPadding.OaepSHA256);
 
                 // Decrypt with private key
-                byte[] decryptedData = rsaPrivate.Decrypt(encryptedData, RSAEncryptionPadding.Pkcs1);
+                byte[] decryptedData = rsaPrivate.Decrypt(encryptedData, RSAEncryptionPadding.OaepSHA256);
 
                 // Convert decrypted data back to string
                 string decryptedMessage = Encoding.UTF8.GetString(decryptedData);

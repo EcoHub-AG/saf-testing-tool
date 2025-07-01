@@ -368,7 +368,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 rsaPrivate.ImportFromPem(privateKeyInfo.Key);
 
                 // Decrypt the AES key
-                byte[] decryptedAesKey = rsaPrivate.Decrypt(encryptedAesKey, RSAEncryptionPadding.Pkcs1);
+                byte[] decryptedAesKey = rsaPrivate.Decrypt(encryptedAesKey, RSAEncryptionPadding.OaepSHA256);
 
                 return decryptedAesKey;
             }
