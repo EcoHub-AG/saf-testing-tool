@@ -44,6 +44,17 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
+                                <!-- Activate button -->
+                                <DataGridTemplateColumn Header="Activate" Width="Auto">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="Activate"
+                            Padding="6,2"
+                            Command="{Binding DataContext.ActivateEncPublicKeyCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                            CommandParameter="{Binding}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
 
@@ -95,8 +106,8 @@
                                 <Button Content="Create Key Pair" Margin="0,0,10,0"
                                     Command="{Binding GenerateKeyPairCommand}" 
                                      />
-                                <Button Content="Validate &amp; Activate Key" Grid.Column="1"
-                                    Command="{Binding ActivateKeyCommand}"
+                                <Button Content="Validate &amp; Upload Key" Grid.Column="1"
+                                    Command="{Binding UploadEncKeyCommand}"
                                     />
                             </Grid>
                         </Grid>
@@ -133,6 +144,17 @@
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Ellipse Width="15" Height="15" Fill="{Binding IsActive, Converter={StaticResource BoolToBrushConverter}}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <!-- Activate button -->
+                                <DataGridTemplateColumn Header="Activate" Width="Auto">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="Activate"
+Padding="6,2"
+Command="{Binding DataContext.ActivateSignPublicKeyCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+CommandParameter="{Binding}" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -187,8 +209,8 @@
                                 <Button Content="Create Key Pair" Margin="0,0,10,0"
                         Command="{Binding GenerateSignatureKeyPairCommand}" 
                          />
-                                <Button Content="Validate &amp; Activate Key" Grid.Column="1"
-                        Command="{Binding ActivateSignatureKeyCommand}"
+                                <Button Content="Validate &amp; Upload Key" Grid.Column="1"
+                        Command="{Binding UploadSignatureKeyCommand}"
                         />
                             </Grid>
                         </Grid>
@@ -220,6 +242,7 @@
                                         <StackPanel Orientation="Vertical">
                                             <TextBlock Text="{Binding Title}" FontWeight="Bold" Margin="5,5,0,0" />
                                             <TextBlock Text="{Binding Timestamp}" FontSize="12" Foreground="Gray" Margin="5,0,0,5" />
+                                            <TextBlock Text="{Binding Verified}" FontSize="12" FontWeight="Bold" Foreground="Blue" Margin="5,0,0,5"></TextBlock>
                                         </StackPanel>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>

@@ -165,6 +165,20 @@ namespace StandardApiFrameworkTool.ViewModels
 
                     await _context.SaveChangesAsync();
 
+                    var privateKeys = await _context.PrivateKeys.ToListAsync();
+                    if (privateKeys.Count > 0)
+                    {
+                        _context.PrivateKeys.RemoveRange(privateKeys);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    var sigKeys = await _context.SignatureKeys.ToListAsync();
+                    if (sigKeys.Count > 0)
+                    {
+                        _context.SignatureKeys.RemoveRange(sigKeys);
+                        await _context.SaveChangesAsync();
+                    }
+
                     MessageBox.Show("Settings saved and Tech User enrolled successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else

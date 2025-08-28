@@ -11,12 +11,12 @@ namespace StandardApiFrameworkTool.Services
 {
     public static class PublicKeyStoreService
     {
-        public static async Task<PublicKeyInfo> FetchPublicKey(
+        public static async Task<List<PublicKeyInfo>> FetchPublicKey(
             string baseAddress,
             string idpNumber,
             X509Certificate2 certificate)
         {
-            string apiUrl = $"{baseAddress}/publickeystore/members/{idpNumber}/key";
+            string apiUrl = $"{baseAddress}/publickeystore/v1/members/{idpNumber}/keys";
 
             HttpClientHandler handler = new HttpClientHandler
             {
@@ -33,7 +33,37 @@ namespace StandardApiFrameworkTool.Services
                 if (response.IsSuccessStatusCode)
                 {
                     string responseBody = await response.Content.ReadAsStringAsync();
-                    return JsonConvert.DeserializeObject<PublicKeyInfo>(responseBody);
+                    return JsonConvert.DeserializeObject<List<PublicKeyInfo>>(responseBody);
+                }
+                else
+                {
+                    throw new HttpRequestException($"Failed to fetch public key. Status code: {response.StatusCode}");
+                }
+            }
+        }
+
+        public static async Task<List<PublicKeyInfo>> FetchPublicKeyForMyMembership(
+            string baseAddress,
+            X509Certificate2 certificate)
+        {
+            string apiUrl = $"{baseAddress}/publickeystore/v1/keys";
+
+            HttpClientHandler handler = new HttpClientHandler
+            {
+                ClientCertificateOptions = ClientCertificateOption.Manual,
+                SslProtocols = System.Security.Authentication.SslProtocols.Tls12
+            };
+
+            handler.ClientCertificates.Add(certificate);
+
+            using (HttpClient client = new HttpClient(handler))
+            {
+                HttpResponseMessage response = await client.GetAsync(apiUrl);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    string responseBody = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<List<PublicKeyInfo>>(responseBody);
                 }
                 else
                 {

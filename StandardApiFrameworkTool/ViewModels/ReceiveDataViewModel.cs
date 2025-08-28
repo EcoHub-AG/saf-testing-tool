@@ -21,6 +21,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Security.Cryptography.Xml;
 
 namespace StandardApiFrameworkTool.ViewModels
 {
@@ -33,10 +34,13 @@ namespace StandardApiFrameworkTool.ViewModels
             ThreadList = new ObservableCollection<ThreadItem>();
             PrivateKeys = new ObservableCollection<PrivateKey>();
             GenerateKeyPairCommand = new RelayCommand(GenerateKeyPair);
-            ActivateKeyCommand = new RelayCommand(async () => await ActivateKey());
+            UploadEncKeyCommand = new RelayCommand(async () => await ValidateAndUploadEncKey());
 
             GenerateSignatureKeyPairCommand = new RelayCommand(GenerateSignatureKeyPair);
-            ActivateSignatureKeyCommand = new RelayCommand(async () => await ActivateSignatureKey());
+            UploadSignatureKeyCommand = new RelayCommand(async () => await ValidateAndUploadSignatureKey());
+
+            ActivateSignPublicKeyCommand = new RelayCommand<SignatureKey>(ActivateSignatureKey);
+            ActivateEncPublicKeyCommand = new RelayCommand<PrivateKey>(ActivateEncryptionKey);
 
             _dbContext = new AppDbContext();
 
@@ -84,11 +88,11 @@ namespace StandardApiFrameworkTool.ViewModels
                     SelectedThreadPayload = FormatJson(SelectedThreadPayload);
                 }
                 OnPropertyChanged(nameof(SelectedThread));
-                
+
             }
         }
 
-        
+
 
         private string _selectedThreadPayload;
         public string SelectedThreadPayload
@@ -165,7 +169,7 @@ namespace StandardApiFrameworkTool.ViewModels
                         GroupId = $"CG-00001-{profile.IdpNumber}",
                     };
 
-                    using (var consumer = new ConsumerBuilder<Ignore, string>(config).Build())
+                    using (var consumer = new ConsumerBuilder<Ignore, byte[]>(config).Build())
                     {
                         consumer.Subscribe(topic);
 
@@ -187,13 +191,15 @@ namespace StandardApiFrameworkTool.ViewModels
                                     var consumeResult = consumer.Consume(cts.Token);
 
                                     // Use Dispatcher to update the UI safely
-                                    Application.Current.Dispatcher.Invoke(() =>
+                                    await Application.Current.Dispatcher.Invoke(async () =>
                                     {
                                         ThreadList.Add(new ThreadItem
                                         {
-                                            Payload = consumeResult.Value,
+                                            Payload = GetCleanJson(consumeResult.Message.Value),
                                             Timestamp = DateTime.Now.ToString(),
-                                            Title = ExtractData(consumeResult.Value),
+                                            Title = ExtractData(consumeResult.Message.Value),
+                                            Verified = await GetVerifiedString(
+                                                GetCleanJson(consumeResult.Message.Value))
                                         });
                                     });
                                 }
@@ -227,27 +233,81 @@ namespace StandardApiFrameworkTool.ViewModels
 
         }
 
-        public string ExtractData(string jsonString)
+        public static string GetCleanJson(ReadOnlySpan<byte> payload)
         {
             try
             {
-                // Parse the JSON string into a JToken object
-                JToken json = JToken.Parse(jsonString);
+                // If this is the Confluent wire format, first byte is 0x00 and next 4 bytes are the schema id.
+                int offset = (payload.Length >= 5 && payload[0] == 0x00) ? 5 : 0;
 
-                // Extract the "Id" field and get the first part of the GUID
+                // From here on, JSON should begin (possibly after whitespace/BOM). Find the first '{' or '['.
+                ReadOnlySpan<byte> rest = payload.Slice(offset);
+                int jsonStart = FindJsonStart(rest);
+                if (jsonStart >= 0) rest = rest.Slice(jsonStart);
+
+                // Decode as UTF-8 JSON (this works for JSON Schema serializer only).
+                string jsonText = Encoding.UTF8.GetString(rest);
+                return jsonText;
+            }
+            catch (Exception ex) { return ex.Message; }
+
+        }
+
+        public static string ExtractData(ReadOnlySpan<byte> payload)
+        {
+            try
+            {
+                // If this is the Confluent wire format, first byte is 0x00 and next 4 bytes are the schema id.
+                int offset = (payload.Length >= 5 && payload[0] == 0x00) ? 5 : 0;
+
+                // From here on, JSON should begin (possibly after whitespace/BOM). Find the first '{' or '['.
+                ReadOnlySpan<byte> rest = payload.Slice(offset);
+                int jsonStart = FindJsonStart(rest);
+                if (jsonStart >= 0) rest = rest.Slice(jsonStart);
+
+                // Decode as UTF-8 JSON (this works for JSON Schema serializer only).
+                string jsonText = Encoding.UTF8.GetString(rest);
+
+                // Parse & extract
+                var json = JToken.Parse(jsonText);
                 string fullGuid = json["id"]?.ToString();
                 string firstPartOfGuid = fullGuid?.Split('-')[0];
-
-                // Extract the "EventSender.Id" field
                 string senderId = json["eventSender"]?["id"]?.ToString();
 
-                // Output the extracted values
                 return $"{senderId} - {firstPartOfGuid}";
             }
-            catch (Exception ex)
+            catch
             {
                 return "<Unknown>";
             }
+        }
+
+        private static int FindJsonStart(ReadOnlySpan<byte> data)
+        {
+            int i = 0;
+            while (i < data.Length)
+            {
+                // Skip UTF-8 BOM if present
+                if (i + 2 < data.Length && data[i] == 0xEF && data[i + 1] == 0xBB && data[i + 2] == 0xBF)
+                {
+                    i += 3;
+                    continue;
+                }
+
+                byte b = data[i];
+                // Skip whitespace
+                if (b == (byte)' ' || b == (byte)'\t' || b == (byte)'\r' || b == (byte)'\n')
+                {
+                    i++;
+                    continue;
+                }
+
+                if (b == (byte)'{' || b == (byte)'[') return i;
+
+                // Not whitespace or JSON start—give up (caller will try to parse and fail gracefully)
+                return -1;
+            }
+            return -1;
         }
 
         private string FormatJson(string json)
@@ -267,7 +327,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
                 // Load and parse the JSON
                 var parsedJson = JToken.Parse(json);
-                
+
 
                 // Format and indent the JSON for readability
                 var formattedJson = parsedJson.ToString(Newtonsoft.Json.Formatting.Indented);
@@ -279,6 +339,113 @@ namespace StandardApiFrameworkTool.ViewModels
             {
                 return $"Error formatting JSON: {ex.Message}";
             }
+        }
+
+        private async Task<string> GetVerifiedString(string jsonString)
+        {
+            var payload = string.Empty;
+            var payloadSignature = string.Empty;
+            var senderIdp = string.Empty;
+            var signatureKeyVersion = string.Empty;
+            try
+            {
+                // Parse the JSON string into a JToken object
+                JToken json = JToken.Parse(jsonString);
+
+                // Extract the "EventSender.Id" field
+                payload = json["data"]?["payload"]?.ToString();
+                payloadSignature = json["data"]?["payloadSignature"]?.ToString();
+                senderIdp = json["eventSender"]?["id"]?.ToString();
+                signatureKeyVersion = json["data"]?["signatureKeyVersion"]?.ToString();
+
+            }
+            catch (Exception ex)
+            {
+                return string.Empty;
+            }
+
+            var signKey = await GetSignKey(senderIdp, signatureKeyVersion);
+
+            try
+            {
+                return VerifyPayload(payload, payloadSignature, signKey) ?
+                "Verified" :
+                string.Empty;
+            }
+            catch (Exception)
+            {
+
+                return string.Empty ;
+            }
+            
+        }
+
+        private async Task<string> GetSignKey(string? senderIdp, string signatureKeyVersion)
+        {
+            var profile = _dbContext.Profiles.FirstOrDefault();
+            if (profile == null)
+            {
+                return string.Empty;
+            }
+
+            var environment = _dbContext.EnvironmentSettings
+                .FirstOrDefault(e => e.EnvironmentName == profile.SelectedEnvironment);
+            if (environment == null)
+            {
+                return string.Empty;
+            }
+
+            var certificate = GetClientCertificate();
+
+            // Fetch the public key
+            var publicKeyInfo = await PublicKeyStoreService.FetchPublicKey(
+                environment.ServicesApiUrl,
+                senderIdp,
+                certificate);
+
+            if (publicKeyInfo == null || publicKeyInfo.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            var hasEncKey = publicKeyInfo
+                .Where(p => p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                .Where(p => p.Version == signatureKeyVersion)
+                .Where(p => p.KeyType == "signature")
+                .Any();
+
+            if (!hasEncKey)
+            {
+                return string.Empty;
+            }
+
+            var signKey = publicKeyInfo
+                .Where(p => p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                .Where(p => p.Version == signatureKeyVersion)
+                .Where(p => p.KeyType == "signature")
+                .FirstOrDefault();
+
+            return signKey.Key;
+        }
+
+        bool VerifyPayload(string payload, string base64Signature, string publicKeyPem)
+        {
+            
+            // 1) Load the public key
+            using var ecdsa = ECDsa.Create();
+            ecdsa.ImportFromPem(publicKeyPem.AsSpan());
+
+            // 2) Convert inputs
+            byte[] payloadBytes = Encoding.UTF8.GetBytes(payload);
+            byte[] signatureBytes = Convert.FromBase64String(base64Signature);
+
+            // 3) Verify (hash inside VerifyData)
+            return ecdsa.VerifyData(
+                payloadBytes,
+                signatureBytes,
+                HashAlgorithmName.SHA384,
+                DSASignatureFormat.Rfc3279DerSequence // must match the signer
+            );
         }
 
         private string DecryptAndUnZip(string content)
@@ -436,14 +603,14 @@ namespace StandardApiFrameworkTool.ViewModels
 
         #endregion
 
-        #region Encryption
+        #region Encryption Key
         private ObservableCollection<PrivateKey> _privateKeys;
 
         public ObservableCollection<PrivateKey> PrivateKeys
         {
             get { return _privateKeys; }
-            set 
-            { 
+            set
+            {
                 _privateKeys = value;
                 OnPropertyChanged(nameof(PrivateKeys));
             }
@@ -454,8 +621,8 @@ namespace StandardApiFrameworkTool.ViewModels
         public string GeneratedPublicKey
         {
             get { return _generatedPublicKey; }
-            set 
-            { 
+            set
+            {
                 _generatedPublicKey = value;
                 OnPropertyChanged(nameof(GeneratedPublicKey));
             }
@@ -466,15 +633,15 @@ namespace StandardApiFrameworkTool.ViewModels
         public string GeneratedPrivateKey
         {
             get { return _generatedPrivateKey; }
-            set 
-            { 
+            set
+            {
                 _generatedPrivateKey = value;
                 OnPropertyChanged(nameof(GeneratedPrivateKey));
             }
         }
 
         public ICommand GenerateKeyPairCommand { get; }
-        public ICommand ActivateKeyCommand { get; }
+        public ICommand UploadEncKeyCommand { get; }
 
         private void GenerateKeyPair()
         {
@@ -484,14 +651,46 @@ namespace StandardApiFrameworkTool.ViewModels
             OnPropertyChanged(nameof(GeneratedPrivateKey));
         }
 
-        private async Task ActivateKey()
+        private async Task ValidateAndUploadEncKey()
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
                 ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = true;
             });
 
-            await UploadAndSaveToDatabase();
+            (var cert, var baseAddress) = GetCertificateAndBaseAddress();
+
+            if (cert == null) { return; }
+            
+            // Fetch the public key
+            var publicKeyInfo = await PublicKeyStoreService.FetchPublicKeyForMyMembership(
+                baseAddress,
+                cert);
+
+            string version = null;
+            foreach (var pubKey in publicKeyInfo)
+            {
+                if (pubKey.KeyType == "signature") continue;
+
+                using var rsaPublic = RSA.Create();
+                using var rsaPublic2 = RSA.Create();
+
+                rsaPublic.ImportFromPem(pubKey.Key.ToCharArray());
+                rsaPublic2.ImportFromPem(GeneratedPublicKey.ToCharArray());
+
+                var der1 = rsaPublic.ExportSubjectPublicKeyInfo();
+                var der2 = rsaPublic2.ExportSubjectPublicKeyInfo();
+
+                bool equal = der1.SequenceEqual(der2);
+
+                if (equal)
+                {
+                    version = pubKey.Version;
+                }
+            }
+
+            await UploadAndSaveToDatabase(version);
+
             GeneratedPublicKey = string.Empty;
             GeneratedPrivateKey = string.Empty;
 
@@ -501,10 +700,168 @@ namespace StandardApiFrameworkTool.ViewModels
             });
         }
 
-        #region properties signature keys
+        private async Task UploadAndSaveToDatabase(string version = null)
+        {
+            if (string.IsNullOrWhiteSpace(GeneratedPublicKey) || string.IsNullOrWhiteSpace(GeneratedPrivateKey))
+            {
+                MessageBox.Show("Empty public key or private key. Please generate a key pair first.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // validate 
+            var isValid = RSAKeyHelper.ValidateKeyPair(GeneratedPublicKey, GeneratedPrivateKey);
+
+            if (!isValid)
+            {
+                MessageBox.Show("Validation failed.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(version))
+            {
+                SavePrivateKeyOnlyToDb(version);
+
+                X509Certificate2 certificate;
+                string baseAddress;
+                (certificate, baseAddress) = GetCertificateAndBaseAddress();
+
+                return;
+            }
+
+            // Need to upload public key //
+
+            var lastVersion = "1.0.0";
+            try
+            {
+                lastVersion = _dbContext.PrivateKeys.Max(x => x.Version);
+            }
+            catch (Exception ex)
+            {
+
+            }
+            var currentVersion = IncreaseVersion(lastVersion);
+
+
+            int maxTries = 15;
+
+            for (int i = 0; i < maxTries; i++)
+            {
+                try
+                {
+                    var success = await UploadPublicKey(currentVersion);
+                    if (!success)
+                    {
+                        return;
+                    }
+                    break;
+                }
+                catch (KeyVersionExists kve)
+                {
+                    currentVersion = IncreaseVersion(currentVersion);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+            }
+
+            SavePrivateKeyOnlyToDb(currentVersion);
+
+            // Call service to upload and activate the key (implement service logic)
+            MessageBox.Show("Public key activated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void SavePrivateKeyOnlyToDb(string currentVersion)
+        {
+            var alreadyInDB = _dbContext.PrivateKeys.FirstOrDefault(x => x.Version == currentVersion);
+            if (alreadyInDB != null)
+            {
+                MessageBox.Show($"Version {currentVersion} is already uploaded in the tool");
+                return;
+            }
+
+            _dbContext.PrivateKeys.Add(new PrivateKey
+            {
+                Version = currentVersion,
+                Key = GeneratedPrivateKey,
+                IsActive = false,
+                CreatedAt = DateTime.Now,
+            });
+
+            _dbContext.SaveChanges();
+            PrivateKeys = new ObservableCollection<PrivateKey>(_dbContext.PrivateKeys.Select(pk => new PrivateKey
+            {
+                Id = pk.Id,
+                Version = pk.Version,
+                CreatedAt = pk.CreatedAt,
+                IsActive = pk.IsActive,
+            }));
+        }
+
+        private async Task<bool> UploadPublicKey(string version)
+        {
+            X509Certificate2 certificate;
+            string baseAddress;
+            (certificate, baseAddress) = GetCertificateAndBaseAddress();
+
+            var keyId = await PublicKeyStoreService.UploadPublicKey(baseAddress, GeneratedPublicKey, version, 365, "encryption", certificate);
+
+            return true;
+        }
+
+        private async void ActivateEncryptionKey(PrivateKey privateKey)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = true;
+            });
+
+            (var cert, var baseAddress) = GetCertificateAndBaseAddress();
+
+            if (cert == null) { return; }
+
+            var allKeys = await PublicKeyStoreService.FetchPublicKeyForMyMembership(baseAddress, cert);
+
+            var keyFromEcoHub = allKeys.Where(k => k.KeyType == "encryption")
+                .FirstOrDefault(x => x.Version == privateKey.Version);
+
+            if (keyFromEcoHub == null)
+            {
+                MessageBox.Show("PublicKey deleted from EcoHub, Can't be activated", "Error");
+                return;
+            }
+
+            await PublicKeyStoreService.ActivatePublicKey(baseAddress, keyFromEcoHub.KeyId.ToString(), cert);
+
+            _dbContext.PrivateKeys.ToList().ForEach(x => x.IsActive = false);
+
+            var signKeyFromDatabase = _dbContext.PrivateKeys.FirstOrDefault(x => x.Version == privateKey.Version);
+            signKeyFromDatabase.IsActive = true;
+
+            _dbContext.SaveChanges();
+            PrivateKeys = new ObservableCollection<PrivateKey>(_dbContext.PrivateKeys.Select(pk => new PrivateKey
+            {
+                Id = pk.Id,
+                Version = pk.Version,
+                CreatedAt = pk.CreatedAt,
+                IsActive = pk.IsActive,
+            }));
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
+            });
+
+        }
+
+        #endregion
+
+        #region Signature key
 
         public ICommand GenerateSignatureKeyPairCommand { get; }
-        public ICommand ActivateSignatureKeyCommand { get; }
+        public ICommand UploadSignatureKeyCommand { get; }
+        public ICommand ActivateSignPublicKeyCommand { get; }
 
         private ObservableCollection<SignatureKey> _signatureKeys;
 
@@ -546,14 +903,48 @@ namespace StandardApiFrameworkTool.ViewModels
             OnPropertyChanged(nameof(GeneratedSignaturePrivateKey));
         }
 
-        private async Task ActivateSignatureKey()
+        private async Task ValidateAndUploadSignatureKey()
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
                 ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = true;
             });
 
-            await UploadSignatureKeyAndSaveToDatabase();
+            (var cert, var baseAddress) = GetCertificateAndBaseAddress();
+
+            if (cert == null) { return; }
+
+            // Fetch the public key
+            var publicKeyInfo = await PublicKeyStoreService.FetchPublicKeyForMyMembership(
+                baseAddress,
+                cert);
+
+            string version = null;
+            // Prepare the reference public key once
+            using var refEcdsa = ECDsa.Create();
+            refEcdsa.ImportFromPem(GeneratedSignaturePublicKey);
+            var refSpki = refEcdsa.ExportSubjectPublicKeyInfo();
+
+            foreach (var pubKey in publicKeyInfo)
+            {
+                // Skip non-key entries if that's what you intended
+                if (pubKey.KeyType.Equals("encryption", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                using var ecdsa = ECDsa.Create();
+                ecdsa.ImportFromPem(pubKey.Key);
+
+                var spki = ecdsa.ExportSubjectPublicKeyInfo();
+
+                if (CryptographicOperations.FixedTimeEquals(spki, refSpki))
+                {
+                    version = pubKey.Version;
+                    break; // stop at first match
+                }
+            }
+
+
+            await UploadSignatureKeyAndSaveToDatabase(version);
             GeneratedSignaturePublicKey = string.Empty;
             GeneratedSignaturePrivateKey = string.Empty;
 
@@ -563,11 +954,11 @@ namespace StandardApiFrameworkTool.ViewModels
             });
         }
 
-        #endregion
 
-        private async Task UploadSignatureKeyAndSaveToDatabase()
+
+        private async Task UploadSignatureKeyAndSaveToDatabase(string version = null)
         {
-            if (string.IsNullOrWhiteSpace(GeneratedSignaturePublicKey) 
+            if (string.IsNullOrWhiteSpace(GeneratedSignaturePublicKey)
                 || string.IsNullOrWhiteSpace(GeneratedSignaturePrivateKey))
             {
                 MessageBox.Show("Empty public key or private key. Please generate a key pair first.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -583,6 +974,17 @@ namespace StandardApiFrameworkTool.ViewModels
                 return;
             }
 
+            if (!string.IsNullOrEmpty(version))
+            {
+                SaveSignaturePrivateKeyOnlyToDb(version);
+
+                X509Certificate2 certificate;
+                string baseAddress;
+                (certificate, baseAddress) = GetCertificateAndBaseAddress();
+
+                return;
+            }
+
             var lastVersion = "1.0.0";
             try
             {
@@ -592,7 +994,7 @@ namespace StandardApiFrameworkTool.ViewModels
             {
 
             }
-                
+
             var currentVersion = IncreaseVersion(lastVersion);
 
 
@@ -620,13 +1022,26 @@ namespace StandardApiFrameworkTool.ViewModels
                 }
             }
 
-            _dbContext.SignatureKeys.ToList().ForEach(x => x.IsActive = false);
+            SaveSignaturePrivateKeyOnlyToDb(currentVersion);
+
+            // Call service to upload and activate the key (implement service logic)
+            MessageBox.Show("Public key activated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void SaveSignaturePrivateKeyOnlyToDb(string currentVersion)
+        {
+            var alreadyInDB = _dbContext.SignatureKeys.FirstOrDefault(x => x.Version == currentVersion);
+            if (alreadyInDB != null)
+            {
+                MessageBox.Show($"Version {currentVersion} is already uploaded in the tool");
+                return;
+            }
 
             _dbContext.SignatureKeys.Add(new SignatureKey
             {
                 Version = currentVersion,
-                Key = GeneratedSignaturePrivateKey,
-                IsActive = true,
+                Key = GeneratedPrivateKey,
+                IsActive = false,
                 CreatedAt = DateTime.Now,
             });
 
@@ -638,76 +1053,55 @@ namespace StandardApiFrameworkTool.ViewModels
                 CreatedAt = pk.CreatedAt,
                 IsActive = pk.IsActive,
             }));
-
-            // Call service to upload and activate the key (implement service logic)
-            MessageBox.Show("Public key activated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        private async Task UploadAndSaveToDatabase()
+        private async Task<bool> UploadSignaturePublicKey(string version)
         {
-            if (string.IsNullOrWhiteSpace(GeneratedPublicKey) || string.IsNullOrWhiteSpace(GeneratedPrivateKey))
+            (var cert, var baseAddress) = GetCertificateAndBaseAddress();
+
+            if (cert == null) { return false; }
+            var keyId = await PublicKeyStoreService.UploadPublicKey(
+                baseAddress, 
+                GeneratedSignaturePublicKey, 
+                version, 
+                365, 
+                "signature", 
+                cert);
+            return true;
+        }
+
+        // Example ActivateKeyCommand
+        public ICommand ActivateEncPublicKeyCommand { get; }
+
+        private async void ActivateSignatureKey(SignatureKey signatureKey)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
             {
-                MessageBox.Show("Empty public key or private key. Please generate a key pair first.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-
-            // validate 
-            var isValid = RSAKeyHelper.ValidateKeyPair(GeneratedPublicKey, GeneratedPrivateKey);
-
-            if (!isValid)
-            {
-                MessageBox.Show("Validation failed.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-
-            var lastVersion = "1.0.0";
-            try
-            {
-                lastVersion = _dbContext.PrivateKeys.Max(x => x.Version);
-            }
-            catch (Exception ex)
-            {
-
-            }
-            var currentVersion = IncreaseVersion(lastVersion);
-
-
-            int maxTries = 15;
-
-            for (int i = 0; i < maxTries; i++)
-            {
-                try
-                {
-                    var success = await UploadPublicKey(currentVersion);
-                    if (!success)
-                    {
-                        return;
-                    }
-                    break;
-                }
-                catch(KeyVersionExists kve)
-                {
-                    currentVersion = IncreaseVersion(currentVersion);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-            }
-
-            _dbContext.PrivateKeys.ToList().ForEach(x => x.IsActive = false);
-
-            _dbContext.PrivateKeys.Add(new PrivateKey
-            {
-                Version = currentVersion,
-                Key = GeneratedPrivateKey,
-                IsActive = true,
-                CreatedAt = DateTime.Now,
+                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = true;
             });
 
+            (var cert, var baseAddress) = GetCertificateAndBaseAddress();
+
+            if (cert == null) { return; }
+
+            var allKeys = await PublicKeyStoreService.FetchPublicKeyForMyMembership(baseAddress, cert);
+
+            var keyFromEcoHub = allKeys.Where(k => k.KeyType == "signature")
+                .FirstOrDefault(x => x.Version == signatureKey.Version);
+            
+            if(keyFromEcoHub == null) {
+                MessageBox.Show("PublicKey deleted from EcoHub, Can't be activated", "Error");
+                return; }
+
+            await PublicKeyStoreService.ActivatePublicKey(baseAddress, keyFromEcoHub.KeyId.ToString(), cert);
+
+            _dbContext.SignatureKeys.ToList().ForEach(x => x.IsActive = false);
+
+            var signKeyFromDatabase = _dbContext.SignatureKeys.FirstOrDefault(x => x.Version == signatureKey.Version);
+            signKeyFromDatabase.IsActive = true;
+
             _dbContext.SaveChanges();
-            PrivateKeys = new ObservableCollection<PrivateKey>(_dbContext.PrivateKeys.Select(pk => new PrivateKey
+            SignatureKeys = new ObservableCollection<SignatureKey>(_dbContext.SignatureKeys.Select(pk => new SignatureKey
             {
                 Id = pk.Id,
                 Version = pk.Version,
@@ -715,8 +1109,63 @@ namespace StandardApiFrameworkTool.ViewModels
                 IsActive = pk.IsActive,
             }));
 
-            // Call service to upload and activate the key (implement service logic)
-            MessageBox.Show("Public key activated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
+            });
+
+        }
+
+
+        #endregion
+
+        #region Common private methods
+
+        private (X509Certificate2, string) GetCertificateAndBaseAddress()
+        {
+            X509Certificate2 certificate;
+            string baseAddress;
+            var profile = _dbContext.Profiles.FirstOrDefault();
+            if (profile == null)
+            {
+                MessageBox.Show("Profile information is missing. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return (null, null);
+            }
+
+            var environment = _dbContext.EnvironmentSettings.FirstOrDefault(e => e.EnvironmentName == profile.SelectedEnvironment);
+            if (environment == null)
+            {
+                MessageBox.Show("Environment not found. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return (null, null);
+            }
+
+
+            certificate = GetClientCertificate();
+            baseAddress = environment.ServicesApiUrl;
+
+            return (certificate, baseAddress);
+        }
+
+        private X509Certificate2 GetClientCertificate()
+        {
+            var profile = _dbContext.Profiles.FirstOrDefault();
+            var techUser = _dbContext.TechUsers.FirstOrDefault();
+
+            if (techUser == null || profile == null)
+            {
+                throw new InvalidOperationException("Not connected. Please configure general settings.");
+            }
+
+            // Decode the Base64 string to get the byte array
+            byte[] certificateBytes = Convert.FromBase64String(techUser.TechUserCert);
+
+            // Create an X509Certificate2 object from the byte array
+            X509Certificate2 certificate = new X509Certificate2(
+                certificateBytes,
+                profile.Password,
+                X509KeyStorageFlags.Exportable);
+
+            return certificate;
         }
 
         private string IncreaseVersion(string? lastVersion)
@@ -751,80 +1200,6 @@ namespace StandardApiFrameworkTool.ViewModels
                 // Handle cases where the version string is malformed
                 throw new ArgumentException($"Invalid version format: {lastVersion}");
             }
-        }
-
-        private async Task<bool> UploadSignaturePublicKey(string version)
-        {
-            var profile = _dbContext.Profiles.FirstOrDefault();
-            if (profile == null)
-            {
-                MessageBox.Show("Profile information is missing. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return false;
-            }
-
-            var environment = _dbContext.EnvironmentSettings.FirstOrDefault(e => e.EnvironmentName == profile.SelectedEnvironment);
-            if (environment == null)
-            {
-                MessageBox.Show("Environment not found. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return false;
-            }
-
-
-            var certificate = GetClientCertificate();
-            string baseAddress = environment.ServicesApiUrl;
-
-            var keyId = await PublicKeyStoreService.UploadPublicKey(baseAddress, GeneratedSignaturePublicKey, version, 365, "signature", certificate);
-
-            await PublicKeyStoreService.ActivatePublicKey(baseAddress, keyId.ToString(), certificate);
-            return true;
-        }
-
-        private async Task<bool> UploadPublicKey(string version)
-        {
-            var profile = _dbContext.Profiles.FirstOrDefault();
-            if (profile == null)
-            {
-                MessageBox.Show("Profile information is missing. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return false;
-            }
-
-            var environment = _dbContext.EnvironmentSettings.FirstOrDefault(e => e.EnvironmentName == profile.SelectedEnvironment);
-            if (environment == null)
-            {
-                MessageBox.Show("Environment not found. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                return false;
-            }
-            
-
-            var certificate = GetClientCertificate();
-            string baseAddress = environment.ServicesApiUrl;
-            
-            var keyId = await PublicKeyStoreService.UploadPublicKey(baseAddress, GeneratedPublicKey, version, 365, "encryption", certificate);
-
-            await PublicKeyStoreService.ActivatePublicKey(baseAddress, keyId.ToString() , certificate);
-            return true;
-        }
-
-        private X509Certificate2 GetClientCertificate()
-        {
-            var profile = _dbContext.Profiles.FirstOrDefault();
-            var techUser = _dbContext.TechUsers.FirstOrDefault();
-
-            if (techUser == null || profile == null)
-            {
-                throw new InvalidOperationException("Not connected. Please configure general settings.");
-            }
-
-            // Decode the Base64 string to get the byte array
-            byte[] certificateBytes = Convert.FromBase64String(techUser.TechUserCert);
-
-            // Create an X509Certificate2 object from the byte array
-            X509Certificate2 certificate = new X509Certificate2(
-                certificateBytes,
-                profile.Password,
-                X509KeyStorageFlags.Exportable);
-
-            return certificate;
         }
 
 

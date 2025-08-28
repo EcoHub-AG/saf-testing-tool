@@ -11,6 +11,7 @@ namespace StandardApiFrameworkTool.Models
         public string Title { get; set; }
         public string Timestamp { get; set; }
         public string Payload { get; set; }
+        public string Verified { get; set; }
     }
 
 }

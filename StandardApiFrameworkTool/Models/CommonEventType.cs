@@ -21,7 +21,7 @@ namespace StandardApiFrameworkTool.Models
         [JsonProperty("payload", NullValueHandling = NullValueHandling.Ignore)]
         public string Payload { get; set; }
 
-        [JsonProperty("payLoadSignature", NullValueHandling = NullValueHandling.Ignore)]
+        [JsonProperty("payloadSignature", NullValueHandling = NullValueHandling.Ignore)]
         public string PayloadSignature { get; set; }
 
         [JsonProperty("links", NullValueHandling = NullValueHandling.Ignore)]
@@ -113,6 +113,9 @@ namespace StandardApiFrameworkTool.Models
 
         [JsonProperty("processStatus", NullValueHandling = NullValueHandling.Ignore)]
         public string ProcessStatus { get; set; }
+
+        [JsonProperty("processVersion", NullValueHandling = NullValueHandling.Ignore)]
+        public string ProcessVersion { get; set; }
 
         [JsonProperty("subProcessName", NullValueHandling = NullValueHandling.Ignore)]
         public string SubProcessName { get; set; }

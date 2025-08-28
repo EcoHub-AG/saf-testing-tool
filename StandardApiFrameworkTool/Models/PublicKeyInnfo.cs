@@ -1,15 +1,50 @@
-﻿namespace StandardApiFrameworkTool.Models
+﻿using Newtonsoft.Json;
+
+namespace StandardApiFrameworkTool.Models
 {
     public class PublicKeyInfo
     {
-        public string KeyId { get; set; }
+        [JsonProperty("keyType")]
+        public string KeyType { get; set; }
+
+        [JsonProperty("supportedProcesses")]
+        public List<SupportedProcess> SupportedProcesses { get; set; }
+
+        [JsonProperty("keyId")]
+        public Guid KeyId { get; set; }
+
+        [JsonProperty("membershipId")]
         public Guid MembershipId { get; set; }
-        public string version { get; set; }
+
+        [JsonProperty("version")]
+        public string Version { get; set; }
+
+        // PEM (public key)
+        [JsonProperty("key")]
         public string Key { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime LastUpdatedAt { get; set; }
-        public DateTime ActivatedAt { get; set; }
-        public DateTime ExpiryDate { get; set; }
+
+        [JsonProperty("createdAt")]
+        public DateTimeOffset CreatedAt { get; set; }
+
+        [JsonProperty("lastUpdatedAt")]
+        public DateTimeOffset LastUpdatedAt { get; set; }
+
+        [JsonProperty("activatedAt")]
+        public DateTimeOffset ActivatedAt { get; set; }
+
+        [JsonProperty("expiryDate")]
+        public DateTimeOffset ExpiryDate { get; set; }
+
+        [JsonProperty("ecoHubStatus")]
         public string EcoHubStatus { get; set; }
+
+        [JsonProperty("verificationStatus")]
+        public string VerificationStatus { get; set; }
+    }
+
+    public class SupportedProcess
+    {
+        [JsonProperty("processName")]
+        public string ProcessName { get; set; }
     }
 }

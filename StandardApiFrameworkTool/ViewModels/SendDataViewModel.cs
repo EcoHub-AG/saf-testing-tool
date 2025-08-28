@@ -251,9 +251,7 @@ namespace StandardApiFrameworkTool.ViewModels
                     SelectedReceiver.Idp.FirstOrDefault(), 
                     certificate);
 
-
-
-                if (publicKeyInfo == null || string.IsNullOrWhiteSpace(publicKeyInfo.Key))
+                if (publicKeyInfo == null || publicKeyInfo.Count == 0)
                 {
                     MessageBox.Show("Failed to retrieve a valid public key.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
@@ -265,8 +263,32 @@ namespace StandardApiFrameworkTool.ViewModels
                     return;
                 }
 
+                var hasEncKey = publicKeyInfo
+                    .Where(p => p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                    .Where(p => p.EcoHubStatus == "Activated")
+                    .Where(p => p.KeyType == "encryption")
+                    .Any();
+
+                if (!hasEncKey)
+                {
+                    MessageBox.Show("Failed to retrieve a valid encryption public key.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
+                    });
+
+                    return;
+                }
+
+                var encKey = publicKeyInfo
+                    .Where(p => p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                    .Where(p => p.EcoHubStatus == "Activated")
+                    .Where(p => p.KeyType == "encryption")
+                    .FirstOrDefault();
+
                 // Encrypt the content
-                EncryptContentWithPublicKey(publicKeyInfo.Key);
+                EncryptContentWithPublicKey(encKey.Key);
 
                 SignPayload();
             }
@@ -287,7 +309,7 @@ namespace StandardApiFrameworkTool.ViewModels
             byte[] hashBytes;
             using (var sha384 = SHA384.Create())
             {
-                hashBytes = sha384.ComputeHash(Encoding.UTF8.GetBytes(InputContent));
+                hashBytes = sha384.ComputeHash(Encoding.UTF8.GetBytes(EncryptedContent));
             }
             MessageHash = Convert.ToBase64String(hashBytes);
 
@@ -304,7 +326,7 @@ namespace StandardApiFrameworkTool.ViewModels
             ecdsa.ImportFromPem(signKey.Key.ToCharArray());
 
             // Convert payload to bytes
-            byte[] payloadBytes = Encoding.UTF8.GetBytes(InputContent);
+            byte[] payloadBytes = Encoding.UTF8.GetBytes(EncryptedContent);
 
             // Hash and sign the data
             byte[] signature = ecdsa.SignData(payloadBytes, HashAlgorithmName.SHA384, DSASignatureFormat.Rfc3279DerSequence);
@@ -456,6 +478,42 @@ namespace StandardApiFrameworkTool.ViewModels
                 SelectedReceiver.Idp.FirstOrDefault(),
                 certificate);
 
+            if (publicKeyInfo == null || publicKeyInfo.Count == 0)
+            {
+                MessageBox.Show("Failed to retrieve a valid public key.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
+                });
+
+                return;
+            }
+
+            var hasEncKey = publicKeyInfo
+                .Where(p => p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                .Where(p => p.EcoHubStatus == "Activated")
+                .Where(p => p.KeyType == "encryption")
+                .Any();
+
+            if (!hasEncKey)
+            {
+                MessageBox.Show("Failed to retrieve a valid encryption public key.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
+                });
+
+                return;
+            }
+
+            var encKey = publicKeyInfo
+                .Where(p => p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                .Where(p => p.EcoHubStatus == "Activated")
+                .Where(p => p.KeyType == "encryption")
+                .FirstOrDefault();
+
 
             // Initialize the model with the values directly
             var offerNLPIEvent = new CommonEventType
@@ -473,7 +531,7 @@ namespace StandardApiFrameworkTool.ViewModels
                     Payload = EncryptedContent,
                     Links = new List<Links>(), // Empty list, as per the provided JSON
                     EncryptionKey = EncryptedAESKey,
-                    PublicKeyVersion = publicKeyInfo.version,
+                    PublicKeyVersion = encKey.Version,
                     PayloadSignature = SignatureContent,
                     SignatureKeyVersion = _dbContext.SignatureKeys.FirstOrDefault(s => s.IsActive)?.Version,
                 },
@@ -498,7 +556,8 @@ namespace StandardApiFrameworkTool.ViewModels
                 ProcessStatus = "active",
                 SubProcessName = "request",
                 ProcessName = "offer.nlpi",
-                SubProcessStatus = "Created"
+                SubProcessStatus = "Created",
+                ProcessVersion = "1.0.0",
             };
 
 
