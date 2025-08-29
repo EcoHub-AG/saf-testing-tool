@@ -769,7 +769,7 @@ namespace StandardApiFrameworkTool.ViewModels
             SavePrivateKeyOnlyToDb(currentVersion);
 
             // Call service to upload and activate the key (implement service logic)
-            MessageBox.Show("Public key activated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("Public key uploaded successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void SavePrivateKeyOnlyToDb(string currentVersion)
@@ -1025,7 +1025,7 @@ namespace StandardApiFrameworkTool.ViewModels
             SaveSignaturePrivateKeyOnlyToDb(currentVersion);
 
             // Call service to upload and activate the key (implement service logic)
-            MessageBox.Show("Public key activated successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("Public key uploaded successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void SaveSignaturePrivateKeyOnlyToDb(string currentVersion)
@@ -1040,7 +1040,7 @@ namespace StandardApiFrameworkTool.ViewModels
             _dbContext.SignatureKeys.Add(new SignatureKey
             {
                 Version = currentVersion,
-                Key = GeneratedPrivateKey,
+                Key = GeneratedSignaturePrivateKey,
                 IsActive = false,
                 CreatedAt = DateTime.Now,
             });
