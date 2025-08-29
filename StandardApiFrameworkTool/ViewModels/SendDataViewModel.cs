@@ -264,7 +264,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 }
 
                 var hasEncKey = publicKeyInfo
-                    .Where(p => p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                    .Where(p => p.SupportedProcesses == null || p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
                     .Where(p => p.EcoHubStatus == "Activated")
                     .Where(p => p.KeyType == "encryption")
                     .Any();
@@ -282,7 +282,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 }
 
                 var encKey = publicKeyInfo
-                    .Where(p => p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                    .Where(p => p.SupportedProcesses == null || p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
                     .Where(p => p.EcoHubStatus == "Activated")
                     .Where(p => p.KeyType == "encryption")
                     .FirstOrDefault();
@@ -491,7 +491,7 @@ namespace StandardApiFrameworkTool.ViewModels
             }
 
             var hasEncKey = publicKeyInfo
-                .Where(p => p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                .Where(p => p.SupportedProcesses == null || p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
                 .Where(p => p.EcoHubStatus == "Activated")
                 .Where(p => p.KeyType == "encryption")
                 .Any();
@@ -509,7 +509,7 @@ namespace StandardApiFrameworkTool.ViewModels
             }
 
             var encKey = publicKeyInfo
-                .Where(p => p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                .Where(p => p.SupportedProcesses == null || p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
                 .Where(p => p.EcoHubStatus == "Activated")
                 .Where(p => p.KeyType == "encryption")
                 .FirstOrDefault();

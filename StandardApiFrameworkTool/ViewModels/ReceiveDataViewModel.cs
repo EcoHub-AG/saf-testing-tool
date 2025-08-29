@@ -409,7 +409,7 @@ namespace StandardApiFrameworkTool.ViewModels
             }
 
             var hasEncKey = publicKeyInfo
-                .Where(p => p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                .Where(p => p.SupportedProcesses == null || p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
                 .Where(p => p.Version == signatureKeyVersion)
                 .Where(p => p.KeyType == "signature")
                 .Any();
@@ -420,7 +420,7 @@ namespace StandardApiFrameworkTool.ViewModels
             }
 
             var signKey = publicKeyInfo
-                .Where(p => p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                .Where(p => p.SupportedProcesses == null || p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
                 .Where(p => p.Version == signatureKeyVersion)
                 .Where(p => p.KeyType == "signature")
                 .FirstOrDefault();
