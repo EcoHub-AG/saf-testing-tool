@@ -3,9 +3,13 @@ using StandardApiFrameworkTool.Exceptions;
 using StandardApiFrameworkTool.Models;
 using System;
 using System.Net.Http;
+using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace StandardApiFrameworkTool.Services
 {
@@ -123,7 +127,7 @@ namespace StandardApiFrameworkTool.Services
                             }
                         }
                     }
-
+                    
                     throw new HttpRequestException($"Failed to upload public key. Status code: {response.StatusCode}");
                 }
             }
@@ -155,10 +159,84 @@ namespace StandardApiFrameworkTool.Services
                 }
                 else
                 {
-
-                    throw new HttpRequestException($"Failed to activate public key. Status code: {response.StatusCode}");
+                    throw new HttpRequestException($"Failed to activate public key. Status code: {response.StatusCode}, {responseBody}");
                 }
             }
         }
+
+        public static async Task ValidateEncryptionKeyAsync(
+            string baseAddress,
+            string keyId,
+            X509Certificate2 certificate,
+            string privateKeypem,
+            string publicKeyPem)
+        {
+            string verifyUrl = $"{baseAddress}/publickeystore/v1/keys/{keyId}/verify";
+
+            using var client = CreateMtlsClient(certificate);
+
+            // GET challenge
+            string verificationContent = await GetVerificationContentAsync(client, verifyUrl);
+
+            // Decrypt with RSA private key
+            using RSA rsa = RSA.Create();
+            rsa.ImportFromPem(privateKeypem);
+            byte[] cipher = Convert.FromBase64String(verificationContent);
+            byte[] plain = rsa.Decrypt(cipher, RSAEncryptionPadding.OaepSHA256);
+            string verifiedContent = Encoding.UTF8.GetString(plain);
+
+            // POST back
+            var payload = new { keyId, verifiedContent };
+            using var resp = await client.PostAsJsonAsync(verifyUrl, payload);
+            resp.EnsureSuccessStatusCode();
+        }
+
+        public static async Task ValidateSignatureKeyAsync(
+            string baseAddress,
+            string keyId,
+            X509Certificate2 certificate,
+            string privateKeypem,
+            string publicKeyPem)
+        {
+            string verifyUrl = $"{baseAddress}/publickeystore/v1/keys/{keyId}/verify";
+
+            using var client = CreateMtlsClient(certificate);
+
+            // GET challenge
+            string verificationContent = await GetVerificationContentAsync(client, verifyUrl);
+
+            // Sign with ECDSA private key
+            using ECDsa ecdsa = ECDsa.Create();
+            ecdsa.ImportFromPem(privateKeypem);
+            byte[] data = Encoding.UTF8.GetBytes(verificationContent);
+            byte[] signature = ecdsa.SignData(data, HashAlgorithmName.SHA384, DSASignatureFormat.Rfc3279DerSequence);
+            string verifiedContent = Convert.ToBase64String(signature);
+
+            // POST back
+            var payload = new { keyId, verifiedContent };
+            using var resp = await client.PostAsJsonAsync(verifyUrl, payload);
+            resp.EnsureSuccessStatusCode();
+        }
+
+
+        private static HttpClient CreateMtlsClient(X509Certificate2 certificate)
+        {
+            var handler = new HttpClientHandler
+            {
+                ClientCertificateOptions = ClientCertificateOption.Manual,
+                SslProtocols = System.Security.Authentication.SslProtocols.Tls12
+            };
+            handler.ClientCertificates.Add(certificate);
+            return new HttpClient(handler);
+        }
+
+        private static async Task<string> GetVerificationContentAsync(HttpClient client, string verifyUrl)
+        {
+            string body = await client.GetStringAsync(verifyUrl);
+            using var doc = JsonDocument.Parse(body);
+            return doc.RootElement.GetProperty("verificationContent").GetString()!;
+        }
+
+
     }
 }

@@ -53,7 +53,7 @@
                             <!-- Encrypted Content Label -->
                             <RowDefinition Height="Auto" />
                             <!-- Encrypted Content Editor -->
-                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto"/>
                             <!-- Zip & Encrypt Button -->
                             <RowDefinition Height="Auto" />
                             <!-- Step Button Bar -->
@@ -114,16 +114,17 @@
 
                             <!-- Encrypted Content Editor -->
                             <avalonedit:TextEditor Name="EncryptedContentEditor"
-                                FontFamily="Consolas"
-                                FontSize="14"
-                                IsReadOnly="True"
-                                ShowLineNumbers="True"
-                                Loaded="EncryptedContentEditor_Loaded"
-                                Margin="0,5,0,10"
-                                local:TextEditorHelper.BoundText="{Binding EncryptedContent, UpdateSourceTrigger=PropertyChanged}" 
-                                HorizontalAlignment="Stretch" 
-                                VerticalAlignment="Stretch"
-                                Grid.Row="3" />
+                            FontFamily="Consolas"
+                                                   MaxHeight="100"
+                            FontSize="14"
+                            IsReadOnly="True"
+                            ShowLineNumbers="True"
+                            Loaded="EncryptedContentEditor_Loaded"
+                            Margin="0,5,0,10"
+                            local:TextEditorHelper.BoundText="{Binding EncryptedContent, UpdateSourceTrigger=PropertyChanged}" 
+                            HorizontalAlignment="Stretch" 
+                            VerticalAlignment="Stretch"
+                            Grid.Row="3" />  
                             <!--#endregion-->
                             
                             <!--#region Signature Key-->
@@ -153,6 +154,7 @@
                             <!-- Signature Content Editor -->
                             <avalonedit:TextEditor Name="SignatureContentEditor"
                                 FontFamily="Consolas"
+                                MaxHeight="100"
                                 FontSize="14"
                                 IsReadOnly="True"
                                 ShowLineNumbers="True"

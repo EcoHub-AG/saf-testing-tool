@@ -49,6 +49,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 Id = pk.Id,
                 Version = pk.Version,
                 CreatedAt = pk.CreatedAt,
+                Key = pk.Key,
                 IsActive = pk.IsActive,
             }));
 
@@ -57,6 +58,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 Id = pk.Id,
                 Version = pk.Version,
                 CreatedAt = pk.CreatedAt,
+                Key = pk.Key,
                 IsActive = pk.IsActive,
             }));
 
@@ -670,22 +672,29 @@ namespace StandardApiFrameworkTool.ViewModels
             string version = null;
             foreach (var pubKey in publicKeyInfo)
             {
-                if (pubKey.KeyType == "signature") continue;
-
-                using var rsaPublic = RSA.Create();
-                using var rsaPublic2 = RSA.Create();
-
-                rsaPublic.ImportFromPem(pubKey.Key.ToCharArray());
-                rsaPublic2.ImportFromPem(GeneratedPublicKey.ToCharArray());
-
-                var der1 = rsaPublic.ExportSubjectPublicKeyInfo();
-                var der2 = rsaPublic2.ExportSubjectPublicKeyInfo();
-
-                bool equal = der1.SequenceEqual(der2);
-
-                if (equal)
+                try
                 {
-                    version = pubKey.Version;
+                    if (pubKey.KeyType == "signature") continue;
+
+                    using var rsaPublic = RSA.Create();
+                    using var rsaPublic2 = RSA.Create();
+
+                    rsaPublic.ImportFromPem(pubKey.Key.ToCharArray());
+                    rsaPublic2.ImportFromPem(GeneratedPublicKey.ToCharArray());
+
+                    var der1 = rsaPublic.ExportSubjectPublicKeyInfo();
+                    var der2 = rsaPublic2.ExportSubjectPublicKeyInfo();
+
+                    bool equal = der1.SequenceEqual(der2);
+
+                    if (equal)
+                    {
+                        version = pubKey.Version;
+                    }
+                }
+                catch (Exception ex)
+                {
+
                 }
             }
 
@@ -795,6 +804,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 Id = pk.Id,
                 Version = pk.Version,
                 CreatedAt = pk.CreatedAt,
+                Key = pk.Key,
                 IsActive = pk.IsActive,
             }));
         }
@@ -832,7 +842,25 @@ namespace StandardApiFrameworkTool.ViewModels
                 return;
             }
 
-            await PublicKeyStoreService.ActivatePublicKey(baseAddress, keyFromEcoHub.KeyId.ToString(), cert);
+            try
+            {
+                await PublicKeyStoreService.ValidateEncryptionKeyAsync(
+                    baseAddress, 
+                    keyFromEcoHub.KeyId.ToString(), 
+                    cert,
+                    privateKey.Key,
+                    keyFromEcoHub.Key);
+                await PublicKeyStoreService.ActivatePublicKey(baseAddress, keyFromEcoHub.KeyId.ToString(), cert);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
+                });
+                return;
+            }
 
             _dbContext.PrivateKeys.ToList().ForEach(x => x.IsActive = false);
 
@@ -845,6 +873,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 Id = pk.Id,
                 Version = pk.Version,
                 CreatedAt = pk.CreatedAt,
+                Key = pk.Key,
                 IsActive = pk.IsActive,
             }));
 
@@ -931,16 +960,24 @@ namespace StandardApiFrameworkTool.ViewModels
                 if (pubKey.KeyType.Equals("encryption", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                using var ecdsa = ECDsa.Create();
-                ecdsa.ImportFromPem(pubKey.Key);
-
-                var spki = ecdsa.ExportSubjectPublicKeyInfo();
-
-                if (CryptographicOperations.FixedTimeEquals(spki, refSpki))
+                try
                 {
-                    version = pubKey.Version;
-                    break; // stop at first match
+                    using var ecdsa = ECDsa.Create();
+                    ecdsa.ImportFromPem(pubKey.Key);
+
+                    var spki = ecdsa.ExportSubjectPublicKeyInfo();
+
+                    if (CryptographicOperations.FixedTimeEquals(spki, refSpki))
+                    {
+                        version = pubKey.Version;
+                        break; // stop at first match
+                    }
                 }
+                catch (Exception ex)
+                {
+
+                }
+                
             }
 
 
@@ -1051,6 +1088,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 Id = pk.Id,
                 Version = pk.Version,
                 CreatedAt = pk.CreatedAt,
+                Key = pk.Key,
                 IsActive = pk.IsActive,
             }));
         }
@@ -1093,7 +1131,25 @@ namespace StandardApiFrameworkTool.ViewModels
                 MessageBox.Show("PublicKey deleted from EcoHub, Can't be activated", "Error");
                 return; }
 
-            await PublicKeyStoreService.ActivatePublicKey(baseAddress, keyFromEcoHub.KeyId.ToString(), cert);
+            try
+            {
+                await PublicKeyStoreService.ValidateSignatureKeyAsync(
+                    baseAddress,
+                    keyFromEcoHub.KeyId.ToString(),
+                    cert,
+                    signatureKey.Key,
+                    keyFromEcoHub.Key);
+                await PublicKeyStoreService.ActivatePublicKey(baseAddress, keyFromEcoHub.KeyId.ToString(), cert);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
+                });
+                return;
+            }
 
             _dbContext.SignatureKeys.ToList().ForEach(x => x.IsActive = false);
 
@@ -1106,6 +1162,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 Id = pk.Id,
                 Version = pk.Version,
                 CreatedAt = pk.CreatedAt,
+                Key = pk.Key,
                 IsActive = pk.IsActive,
             }));
 
