@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Security.Cryptography.Xml;
+using System.Windows.Media;
 
 namespace StandardApiFrameworkTool.ViewModels
 {
@@ -94,6 +95,17 @@ namespace StandardApiFrameworkTool.ViewModels
             }
         }
 
+        private string _topicsInfo;
+
+        public string TopicsInfo
+        {
+            get { return _topicsInfo; }
+            set 
+            { 
+                _topicsInfo = value; 
+                OnPropertyChanged(nameof(TopicsInfo)); 
+            }
+        }
 
 
         private string _selectedThreadPayload;
@@ -157,7 +169,6 @@ namespace StandardApiFrameworkTool.ViewModels
                     // var caPem = File.ReadAllText("ca.pem");
 
                     string bootstrapServers = $"{env.CsmHost}:9092"; // Replace with your Kafka broker(s) address
-                    string topic = profile.OutTopic;
 
                     var config = new ConsumerConfig
                     {
@@ -171,9 +182,23 @@ namespace StandardApiFrameworkTool.ViewModels
                         GroupId = $"CG-00001-{profile.IdpNumber}",
                     };
 
-                    using (var consumer = new ConsumerBuilder<Ignore, byte[]>(config).Build())
+                using (
+                    var consumer = new ConsumerBuilder<Ignore, byte[]>(config)
+                    .SetPartitionsAssignedHandler((c, partitions) =>
                     {
-                        consumer.Subscribe(topic);
+                        var topics = partitions.Select(p => p.Topic).Distinct();
+                        
+                        TopicsInfo = "Subscribed Topics: " +
+                        string.Join(" • ", topics.Select(t => $"{t}"));
+                    })
+                    .Build())
+                {
+                        consumer.Subscribe($"^eh\\.saf\\.{profile.OrgId}(\\..+)?\\.out\\.v1$");
+
+                        var topics = consumer.Assignment
+                             .Select(tp => tp.Topic)
+                             .Distinct()
+                             .ToList();
 
                         CancellationTokenSource cts = new CancellationTokenSource();
 
@@ -195,13 +220,16 @@ namespace StandardApiFrameworkTool.ViewModels
                                     // Use Dispatcher to update the UI safely
                                     await Application.Current.Dispatcher.Invoke(async () =>
                                     {
+                                        (string, Brush) labelTextAndColor = ExtractLabel(consumeResult.Message.Value);
                                         ThreadList.Add(new ThreadItem
                                         {
                                             Payload = GetCleanJson(consumeResult.Message.Value),
                                             Timestamp = DateTime.Now.ToString(),
                                             Title = ExtractData(consumeResult.Message.Value),
                                             Verified = await GetVerifiedString(
-                                                GetCleanJson(consumeResult.Message.Value))
+                                                GetCleanJson(consumeResult.Message.Value)),
+                                            Label = labelTextAndColor.Item1,
+                                            LabelColor = labelTextAndColor.Item2,
                                         });
                                     });
                                 }
@@ -284,6 +312,48 @@ namespace StandardApiFrameworkTool.ViewModels
             }
         }
 
+        public static (string, Brush) ExtractLabel(ReadOnlySpan<byte> payload)
+        {
+            try
+            {
+                // If this is the Confluent wire format, first byte is 0x00 and next 4 bytes are the schema id.
+                int offset = (payload.Length >= 5 && payload[0] == 0x00) ? 5 : 0;
+
+                // From here on, JSON should begin (possibly after whitespace/BOM). Find the first '{' or '['.
+                ReadOnlySpan<byte> rest = payload.Slice(offset);
+                int jsonStart = FindJsonStart(rest);
+                if (jsonStart >= 0) rest = rest.Slice(jsonStart);
+
+                // Decode as UTF-8 JSON (this works for JSON Schema serializer only).
+                string jsonText = Encoding.UTF8.GetString(rest);
+
+                // Parse & extract
+                var json = JToken.Parse(jsonText);
+                string processName = json["processName"]?.ToString();
+
+                if (processName == "Invoices")
+                {
+                    return (processName, Brushes.Purple);
+                }
+                else if(processName == "Contract")
+                {
+                    return (processName, Brushes.Orange);
+                }
+                else if(processName == "Commission")
+                {
+                    return (processName, Brushes.Green);
+                }
+                else
+                {
+                    return (processName, Brushes.Black);
+                }
+            }
+            catch
+            {
+                return ("Unknown", Brushes.Brown);
+            }
+        }
+
         private static int FindJsonStart(ReadOnlySpan<byte> data)
         {
             int i = 0;
@@ -349,6 +419,7 @@ namespace StandardApiFrameworkTool.ViewModels
             var payloadSignature = string.Empty;
             var senderIdp = string.Empty;
             var signatureKeyVersion = string.Empty;
+            var processName = string.Empty;
             try
             {
                 // Parse the JSON string into a JToken object
@@ -359,6 +430,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 payloadSignature = json["data"]?["payloadSignature"]?.ToString();
                 senderIdp = json["eventSender"]?["id"]?.ToString();
                 signatureKeyVersion = json["data"]?["signatureKeyVersion"]?.ToString();
+                processName = json["processName"]?.ToString();
 
             }
             catch (Exception ex)
@@ -366,7 +438,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 return string.Empty;
             }
 
-            var signKey = await GetSignKey(senderIdp, signatureKeyVersion);
+            var signKey = await GetSignKey(senderIdp, signatureKeyVersion, processName);
 
             try
             {
@@ -382,7 +454,7 @@ namespace StandardApiFrameworkTool.ViewModels
             
         }
 
-        private async Task<string> GetSignKey(string? senderIdp, string signatureKeyVersion)
+        private async Task<string> GetSignKey(string? senderIdp, string signatureKeyVersion, string processName)
         {
             var profile = _dbContext.Profiles.FirstOrDefault();
             if (profile == null)
@@ -411,7 +483,7 @@ namespace StandardApiFrameworkTool.ViewModels
             }
 
             var hasEncKey = publicKeyInfo
-                .Where(p => p.SupportedProcesses == null || p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                .Where(p => p.SupportedProcesses == null || p.SupportedProcesses.Any(x => x.ProcessName == processName))
                 .Where(p => p.Version == signatureKeyVersion)
                 .Where(p => p.KeyType == "signature")
                 .Any();
@@ -422,7 +494,7 @@ namespace StandardApiFrameworkTool.ViewModels
             }
 
             var signKey = publicKeyInfo
-                .Where(p => p.SupportedProcesses == null || p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                .Where(p => p.SupportedProcesses == null || p.SupportedProcesses.Any(x => x.ProcessName == processName))
                 .Where(p => p.Version == signatureKeyVersion)
                 .Where(p => p.KeyType == "signature")
                 .FirstOrDefault();
@@ -458,7 +530,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 string pattern = @"\{.*\}";
 
                 // Use regex to extract the JSON part
-                Match match = Regex.Match(content, pattern);
+                Match match = Regex.Match(content, pattern, RegexOptions.Singleline);
 
                 if (match.Success)
                 {

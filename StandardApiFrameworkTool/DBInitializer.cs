@@ -23,6 +23,7 @@ namespace StandardApiFrameworkTool
             var settings = new EnvironmentSetting[]
             {
                 new EnvironmentSetting{EnvironmentName="Development", CsmHost="saf.dev.essential-sandbox.com", ServicesApiUrl="https://dev-ecohub-services-api.azure-api.net"},
+                new EnvironmentSetting{EnvironmentName="Test", CsmHost="saf.test.essential-sandbox.com", ServicesApiUrl="https://test-ecohub-services-api.azure-api.net"},
                 new EnvironmentSetting{EnvironmentName="Staging", CsmHost="saf.essentials-staging.com", ServicesApiUrl="https://stg-ecohub-services-api.azure-api.net"},
                 new EnvironmentSetting{EnvironmentName="IAT", CsmHost="saf.test-myecohub.ch", ServicesApiUrl="https://services.test-myecohub.ch"},
                 new EnvironmentSetting{EnvironmentName="Production", CsmHost="saf.myecohub.ch", ServicesApiUrl="https://services.myecohub.ch"},

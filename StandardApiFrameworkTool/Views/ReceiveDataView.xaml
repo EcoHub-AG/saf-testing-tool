@@ -230,27 +230,64 @@ CommandParameter="{Binding}" />
                             <ColumnDefinition Width="7.5*" />
                             <!-- Payload viewer -->
                         </Grid.ColumnDefinitions>
-
+                        <Grid.RowDefinitions>
+                            <RowDefinition ></RowDefinition>
+                            <RowDefinition Height="auto"></RowDefinition>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="{Binding TopicsInfo}"
+                                   Grid.Row="1" 
+                                   Grid.ColumnSpan="2" 
+                                   HorizontalAlignment="Center"
+                                   FontWeight="SemiBold"
+                                   Margin="0,5,0,0"/>
                         <!-- Thread List -->
-                        <Border BorderBrush="Gray" BorderThickness="1" Margin="0,0,10,0" Grid.Column="0">
+                        <Border BorderBrush="Gray" BorderThickness="1" Margin="0,0,10,0" Grid.Column="0" >
                             <ListBox ItemsSource="{Binding ThreadList}" 
                          SelectedItem="{Binding SelectedThread}" 
                          Margin="5"
-                         Background="WhiteSmoke">
+                         Background="WhiteSmoke" Width="400">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <StackPanel Orientation="Vertical">
-                                            <TextBlock Text="{Binding Title}" FontWeight="Bold" Margin="5,5,0,0" />
-                                            <TextBlock Text="{Binding Timestamp}" FontSize="12" Foreground="Gray" Margin="5,0,0,5" />
-                                            <TextBlock Text="{Binding Verified}" FontSize="12" FontWeight="Bold" Foreground="Blue" Margin="5,0,0,5"></TextBlock>
-                                        </StackPanel>
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition />
+                                                <RowDefinition />
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition></ColumnDefinition>
+                                                <ColumnDefinition></ColumnDefinition>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Main Content -->
+                                            <StackPanel Grid.Row="0" Orientation="Vertical">
+                                                <TextBlock Text="{Binding Title}" FontWeight="Bold" Margin="5,5,0,0" />
+                                                <TextBlock Text="{Binding Timestamp}" FontSize="12" Foreground="Gray" Margin="5,0,0,5" />
+                                                <TextBlock Text="{Binding Verified}" FontSize="12" FontWeight="Bold" Foreground="Blue" Margin="5,0,0,5"/>
+                                            </StackPanel>
+
+                                            <!-- Top-Right Dynamic Label -->
+                                            <Border 
+                Padding="4,1"
+                CornerRadius="5"
+                HorizontalAlignment="Right" 
+                VerticalAlignment="Top"
+                Margin="15,0,0,0" Grid.Column="1"
+                Background="{Binding LabelColor}">
+                                                <TextBlock 
+                    Text="{Binding Label}"        
+                    Foreground="White"
+                    FontSize="11"
+                    FontWeight="SemiBold"/>
+                                            </Border>
+                                        </Grid>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
+
                             </ListBox>
                         </Border>
 
                         <!-- Payload Viewer -->
-                        <Grid Grid.Column="1">
+                        <Grid Grid.Column="1" >
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <!-- Title -->

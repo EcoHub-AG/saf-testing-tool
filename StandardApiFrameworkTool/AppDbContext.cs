@@ -67,7 +67,7 @@ namespace StandardApiFrameworkTool
                 .IsRequired(false);
 
             modelBuilder.Entity<Profile>()
-                .Property(p => p.OutTopic)
+                .Property(p => p.OrgId)
                 .HasDefaultValue(string.Empty);
 
             // PrivateKey configuration
@@ -196,7 +196,7 @@ namespace StandardApiFrameworkTool
         public string LicenseKey { get; set; }
         public string Password { get; set; }
         public string Iak { get; set; }
-        public string OutTopic { get; set; }
+        public string OrgId { get; set; }
     }
 
     public class PrivateKey

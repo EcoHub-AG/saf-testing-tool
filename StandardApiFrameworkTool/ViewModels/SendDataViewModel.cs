@@ -1,28 +1,29 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Confluent.Kafka;
+using Confluent.SchemaRegistry;
+using Confluent.SchemaRegistry.Serdes;
+using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using StandardApiFrameworkTool.Helpers;
+using StandardApiFrameworkTool.Models;
+using StandardApiFrameworkTool.Services;
 using System;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Security.Cryptography.Pkcs;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Text.Unicode;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using StandardApiFrameworkTool.Models;
-using StandardApiFrameworkTool.Services;
-using StandardApiFrameworkTool.Helpers;
-using System.IO.Compression;
-using System.IO;
-using System.Security.Cryptography;
-using System.Text.RegularExpressions;
-using System.Security.Cryptography.Pkcs;
-using Newtonsoft.Json;
-using Confluent.Kafka;
+using System.Xml.Linq;
 using static System.Runtime.InteropServices.JavaScript.JSType;
-using Confluent.SchemaRegistry;
-using Confluent.SchemaRegistry.Serdes;
-using System.Text;
-using System.Text.Unicode;
-using System.Net.Http;
-using Newtonsoft.Json.Linq;
 
 namespace StandardApiFrameworkTool.ViewModels
 {
@@ -39,6 +40,7 @@ namespace StandardApiFrameworkTool.ViewModels
             EncryptContentCommand = new RelayCommand(async () => await FetchAndEncryptContentAsync());
             GeneratePayloadCommand = new RelayCommand(GeneratePayload);
             SendPayloadCommand = new RelayCommand(async () => await SendPayload());
+            SelectedStandard = "offer.nlpi";
         }
 
         
@@ -205,6 +207,61 @@ namespace StandardApiFrameworkTool.ViewModels
             set { _messageHash = value; OnPropertyChanged(nameof(MessageHash)); }
         }
 
+        public ObservableCollection<string> Standards { get; } =
+                new ObservableCollection<string>
+                {
+            "offer.nlpi",
+            "Invoices",
+            "Contract",
+            "Commission"
+                };
+
+        public ObservableCollection<string> Versions { get; } =
+            new ObservableCollection<string>();
+
+        private string _selectedStandard;
+        public string SelectedStandard
+        {
+            get => _selectedStandard;
+            set
+            {
+                if (_selectedStandard != value)
+                {
+                    _selectedStandard = value;
+                    OnPropertyChanged(nameof(SelectedStandard));
+                    UpdateVersions();   // 🔥 update versions dynamically
+                }
+            }
+        }
+
+        private string _selectedVersion;
+        public string SelectedVersion
+        {
+            get => _selectedVersion;
+            set
+            {
+                _selectedVersion = value;
+                OnPropertyChanged(nameof(SelectedVersion));
+            }
+        }
+
+        private void UpdateVersions()
+        {
+            Versions.Clear();
+
+            if (SelectedStandard == "offer.nlpi")
+            {
+                Versions.Add("1.0.0");
+            }
+            else
+            {
+                Versions.Add("5.2.1");
+                Versions.Add("5.4.1");
+            }
+
+            // Optional: Auto-select first version
+            SelectedVersion = Versions.FirstOrDefault();
+        }
 
 
         // methods
@@ -264,7 +321,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 }
 
                 var hasEncKey = publicKeyInfo
-                    .Where(p => p.SupportedProcesses == null || p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                    .Where(p => p.SupportedProcesses == null || p.SupportedProcesses.Any(x => x.ProcessName == SelectedStandard))
                     .Where(p => p.EcoHubStatus == "Activated")
                     .Where(p => p.KeyType == "encryption")
                     .Any();
@@ -282,7 +339,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 }
 
                 var encKey = publicKeyInfo
-                    .Where(p => p.SupportedProcesses == null || p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                    .Where(p => p.SupportedProcesses == null || p.SupportedProcesses.Any(x => x.ProcessName == SelectedStandard))
                     .Where(p => p.EcoHubStatus == "Activated")
                     .Where(p => p.KeyType == "encryption")
                     .FirstOrDefault();
@@ -509,7 +566,7 @@ namespace StandardApiFrameworkTool.ViewModels
             }
 
             var encKey = publicKeyInfo
-                .Where(p => p.SupportedProcesses == null || p.SupportedProcesses.Any(x => x.ProcessName == "offer.nlpi"))
+                .Where(p => p.SupportedProcesses == null || p.SupportedProcesses.Any(x => x.ProcessName == SelectedStandard))
                 .Where(p => p.EcoHubStatus == "Activated")
                 .Where(p => p.KeyType == "encryption")
                 .FirstOrDefault();
@@ -551,13 +608,13 @@ namespace StandardApiFrameworkTool.ViewModels
                     Category = "insurer",
                     Id = profile.IdpNumber.ToString(),
                 },
-                ProcessId = Guid.NewGuid().ToString(),
+                ProcessId = GetProcessId(InputContent) ?? Guid.NewGuid().ToString(),
                 ProcessGroupId = Guid.NewGuid().ToString(),
-                ProcessStatus = "active",
+                ProcessStatus = SelectedStandard == "offer.nlpi"?  "active" : "closed",
                 SubProcessName = "request",
-                ProcessName = "offer.nlpi",
+                ProcessName = SelectedStandard,
                 SubProcessStatus = "Created",
-                ProcessVersion = "1.0.0",
+                ProcessVersion = SelectedVersion,
             };
 
 
@@ -567,6 +624,36 @@ namespace StandardApiFrameworkTool.ViewModels
 
             PayloadContent = jsonString;
         }
+
+        private string GetProcessId(string data)
+        {
+            if (data == null || data.Length == 0)
+                return null;
+
+            try
+            {
+                // Convert byte array to string
+                string xmlContent = data;
+
+                // Load XML
+                XDocument doc = XDocument.Parse(xmlContent);
+
+                // Locate <header> element, namespace-agnostic
+                var header = doc.Descendants().FirstOrDefault(e => e.Name.LocalName == "header");
+                if (header == null)
+                    return null;
+
+                // Extract values ignoring namespace
+                string? processId = header.Descendants().FirstOrDefault(e => e.Name.LocalName == "identificationNo")?.Value;
+               
+                return processId;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
 
         public ICommand SendPayloadCommand { get; }
 

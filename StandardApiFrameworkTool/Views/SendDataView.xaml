@@ -42,6 +42,7 @@
                         <!-- Define responsive rows -->
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                             <!-- Write Content Label -->
                             <RowDefinition Height="*" MinHeight="100"/>
                             <!-- Input Editor -->
@@ -59,10 +60,34 @@
                             <!-- Step Button Bar -->
                         </Grid.RowDefinitions>
 
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="auto"></ColumnDefinition>
+                                <ColumnDefinition Width="auto"></ColumnDefinition>
+                                <ColumnDefinition Width="auto"></ColumnDefinition>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock FontWeight="SemiBold">Select Standard: </TextBlock>
+                            <ComboBox Width="200"
+                                      Height="30"
+                                      Margin="20,0,0,10"
+                                      SelectedIndex="0"
+                                      Grid.Column="1"
+                                      ItemsSource="{Binding Standards}"
+                                      SelectedItem="{Binding SelectedStandard}">
+                                
+                            </ComboBox>
+                            <ComboBox Width="200"
+          Height="30"
+          Margin="20,0,0,10"
+          Grid.Column="2"
+          ItemsSource="{Binding Versions}"
+          SelectedItem="{Binding SelectedVersion}" />
+                        </Grid>
+                        
                         <!-- Write Content Label -->
                         <TextBlock Text="Write Content:" 
                        FontWeight="SemiBold" 
-                       Grid.Row="0" />
+                       Grid.Row="1" />
 
                         <!-- Input Editor -->
                         <avalonedit:TextEditor 
@@ -74,9 +99,9 @@
                 local:TextEditorHelper.BoundText="{Binding InputContent, UpdateSourceTrigger=PropertyChanged}" 
                 HorizontalAlignment="Stretch" 
                 VerticalAlignment="Stretch"
-                Grid.Row="1" />
+                Grid.Row="2" />
 
-                        <Grid Grid.Row="2">
+                        <Grid Grid.Row="3">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="auto"></RowDefinition>
                                 <RowDefinition Height="auto"></RowDefinition>
@@ -174,10 +199,10 @@
                         <Button Content="Zip &amp; Encrypt"
                     Command="{Binding EncryptContentCommand}"
                     HorizontalAlignment="Left"
-                    Grid.Row="6" />
+                    Grid.Row="7" />
 
                         <!-- Step Button Bar -->
-                        <Grid Grid.Row="7">
+                        <Grid Grid.Row="8">
                             <controls:StepButtonBar Back="BACK" Continue="CONTINUE" Mode="Horizontal"/>
                         </Grid>
                     </Grid>

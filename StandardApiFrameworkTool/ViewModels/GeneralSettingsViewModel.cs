@@ -22,7 +22,7 @@ namespace StandardApiFrameworkTool.ViewModels
         private string _licenseKey;
         private string _password;
         private string _iak;
-        private string _outTopic;
+        private string _orgId;
 
         public ObservableCollection<string> Environments { get; set; }
 
@@ -73,10 +73,10 @@ namespace StandardApiFrameworkTool.ViewModels
             set { _iak = value; OnPropertyChanged(nameof(Iak)); }
         }
 
-        public string OutTopic
+        public string OrgId
         {
-            get => _outTopic;
-            set { _outTopic = value; OnPropertyChanged(nameof(OutTopic)); }
+            get => _orgId;
+            set { _orgId = value; OnPropertyChanged(nameof(OrgId)); }
         }
 
         #endregion
@@ -115,7 +115,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 LicenseKey = profile.LicenseKey;
                 Password = profile.Password;
                 Iak = profile.Iak;
-                OutTopic = profile.OutTopic;
+                OrgId = profile.OrgId;
             }
         }
 
@@ -161,7 +161,7 @@ namespace StandardApiFrameworkTool.ViewModels
                     profile.LicenseKey = LicenseKey;
                     profile.Password = Password;
                     profile.Iak = Iak;
-                    profile.OutTopic = OutTopic;
+                    profile.OrgId = OrgId;
 
                     await _context.SaveChangesAsync();
 
