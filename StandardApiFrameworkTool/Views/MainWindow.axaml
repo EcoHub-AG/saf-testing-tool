@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="StandardApiFrameworkTool.Views.MainWindow"
+        Title="Standard Api Framework"
+        Height="800"
+        Width="1200">
+    <Grid RowDefinitions="*,Auto">
+        <TabControl Grid.Row="0">
+            <TabItem Header="Home">
+                <ContentControl Content="{Binding Home}" />
+            </TabItem>
+            <TabItem Header="General Settings">
+                <ContentControl Content="{Binding GeneralSettings}" />
+            </TabItem>
+            <TabItem Header="Send Data">
+                <ContentControl Content="{Binding SendData}" />
+            </TabItem>
+            <TabItem Header="Receive Data">
+                <ContentControl Content="{Binding ReceiveData}" />
+            </TabItem>
+        </TabControl>
+
+        <Border Grid.Row="1" Background="#1F5A99" Padding="8">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">
+                <TextBlock Text="{Binding StatusMessage}" Foreground="White" />
+                <TextBlock Text="|" Foreground="White" />
+                <TextBlock Text="Last Update: N/A" Foreground="White" />
+                <TextBlock Text="|" Foreground="White" />
+                <ProgressBar Width="150" Height="16" IsIndeterminate="{Binding IsProcessing}" />
+                <TextBlock Text="|" Foreground="White" />
+                <TextBlock Text="Version 1" Foreground="White" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

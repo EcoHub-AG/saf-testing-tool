@@ -19,10 +19,9 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Input;
 using System.Security.Cryptography.Xml;
-using System.Windows.Media;
+using Avalonia.Media;
 
 namespace StandardApiFrameworkTool.ViewModels
 {
@@ -147,7 +146,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 catch (Exception ex)
                 {
                     // Log any top-level exception
-                    MessageBox.Show($"Error in Kafka consumer: {ex.Message}");
+                    UiServices.ShowError($"Error in Kafka consumer: {ex.Message}");
                 }
             });
         }
@@ -218,9 +217,9 @@ namespace StandardApiFrameworkTool.ViewModels
                                     var consumeResult = consumer.Consume(cts.Token);
 
                                     // Use Dispatcher to update the UI safely
-                                    await Application.Current.Dispatcher.Invoke(async () =>
+                                    await UiServices.RunOnUiThreadAsync(async () =>
                                     {
-                                        (string, Brush) labelTextAndColor = ExtractLabel(consumeResult.Message.Value);
+                                        (string, IBrush) labelTextAndColor = ExtractLabel(consumeResult.Message.Value);
                                         ThreadList.Add(new ThreadItem
                                         {
                                             Payload = GetCleanJson(consumeResult.Message.Value),
@@ -235,18 +234,18 @@ namespace StandardApiFrameworkTool.ViewModels
                                 }
                                 catch (ConsumeException ex)
                                 {
-                                    MessageBox.Show($"Kafka consume error: {ex.Error.Reason}");
+                                    UiServices.ShowError($"Kafka consume error: {ex.Error.Reason}");
                                 }
                                 catch (Exception ex)
                                 {
-                                    MessageBox.Show($"Error during message consumption: {ex.Message}");
+                                    UiServices.ShowError($"Error during message consumption: {ex.Message}");
                                 }
                             }
                         }
                         catch (OperationCanceledException)
                         {
                             // Log when consumer is cancelled
-                            MessageBox.Show("Consumer loop has been canceled.");
+                            UiServices.ShowInfo("Consumer loop has been canceled.");
                         }
                         finally
                         {
@@ -257,7 +256,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 catch (Exception ex)
                 {
                     // Log any top-level exception
-                    MessageBox.Show($"Error in Kafka consumer: {ex.Message}");
+                    UiServices.ShowError($"Error in Kafka consumer: {ex.Message}");
                 }
             });
 
@@ -312,7 +311,7 @@ namespace StandardApiFrameworkTool.ViewModels
             }
         }
 
-        public static (string, Brush) ExtractLabel(ReadOnlySpan<byte> payload)
+        public static (string, IBrush) ExtractLabel(ReadOnlySpan<byte> payload)
         {
             try
             {
@@ -333,24 +332,24 @@ namespace StandardApiFrameworkTool.ViewModels
 
                 if (processName == "Invoices")
                 {
-                    return (processName, Brushes.Purple);
+                    return (processName, new SolidColorBrush(Colors.Purple));
                 }
                 else if(processName == "Contract")
                 {
-                    return (processName, Brushes.Orange);
+                    return (processName, new SolidColorBrush(Colors.Orange));
                 }
                 else if(processName == "Commission")
                 {
-                    return (processName, Brushes.Green);
+                    return (processName, new SolidColorBrush(Colors.Green));
                 }
                 else
                 {
-                    return (processName, Brushes.Black);
+                    return (processName, new SolidColorBrush(Colors.Black));
                 }
             }
             catch
             {
-                return ("Unknown", Brushes.Brown);
+                return ("Unknown", new SolidColorBrush(Colors.Brown));
             }
         }
 
@@ -559,7 +558,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
                     if (aesKey == null)
                     {
-                        MessageBox.Show("Failed to decrypt AES key.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        UiServices.ShowError("Failed to decrypt AES key.", "Error");
                         return "Failed to decrypt AES key.";
                     }
 
@@ -581,7 +580,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    UiServices.ShowError($"Error: {ex.Message}", "Error");
                     return ex.ToString();
                 }
             }
@@ -598,7 +597,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 var privateKeyInfo = _dbContext.PrivateKeys.FirstOrDefault(p => p.Version == offerNLPI.Data.PublicKeyVersion);
                 if (privateKeyInfo == null)
                 {
-                    MessageBox.Show($"No private key found in the database for version {offerNLPI.Data.PublicKeyVersion}.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    UiServices.ShowError($"No private key found in the database for version {offerNLPI.Data.PublicKeyVersion}.", "Error");
                     return null;
                 }
 
@@ -615,7 +614,7 @@ namespace StandardApiFrameworkTool.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error decrypting AES key: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError($"Error decrypting AES key: {ex.Message}", "Error");
                 return null;
             }
         }
@@ -727,10 +726,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
         private async Task ValidateAndUploadEncKey()
         {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = true;
-            });
+            UiServices.SetIsProcessing(true);
 
             (var cert, var baseAddress) = GetCertificateAndBaseAddress();
 
@@ -775,17 +771,14 @@ namespace StandardApiFrameworkTool.ViewModels
             GeneratedPublicKey = string.Empty;
             GeneratedPrivateKey = string.Empty;
 
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
-            });
+            UiServices.SetIsProcessing(false);
         }
 
         private async Task UploadAndSaveToDatabase(string version = null)
         {
             if (string.IsNullOrWhiteSpace(GeneratedPublicKey) || string.IsNullOrWhiteSpace(GeneratedPrivateKey))
             {
-                MessageBox.Show("Empty public key or private key. Please generate a key pair first.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError("Empty public key or private key. Please generate a key pair first.", "Error");
                 return;
             }
 
@@ -794,7 +787,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
             if (!isValid)
             {
-                MessageBox.Show("Validation failed.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError("Validation failed.", "Error");
                 return;
             }
 
@@ -842,7 +835,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    UiServices.ShowError(ex.Message, "Error");
                     return;
                 }
             }
@@ -850,7 +843,7 @@ namespace StandardApiFrameworkTool.ViewModels
             SavePrivateKeyOnlyToDb(currentVersion);
 
             // Call service to upload and activate the key (implement service logic)
-            MessageBox.Show("Public key uploaded successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            UiServices.ShowInfo("Public key uploaded successfully!", "Success");
         }
 
         private void SavePrivateKeyOnlyToDb(string currentVersion)
@@ -858,7 +851,7 @@ namespace StandardApiFrameworkTool.ViewModels
             var alreadyInDB = _dbContext.PrivateKeys.FirstOrDefault(x => x.Version == currentVersion);
             if (alreadyInDB != null)
             {
-                MessageBox.Show($"Version {currentVersion} is already uploaded in the tool");
+                UiServices.ShowInfo($"Version {currentVersion} is already uploaded in the tool");
                 return;
             }
 
@@ -894,10 +887,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
         private async void ActivateEncryptionKey(PrivateKey privateKey)
         {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = true;
-            });
+            UiServices.SetIsProcessing(true);
 
             (var cert, var baseAddress) = GetCertificateAndBaseAddress();
 
@@ -910,7 +900,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
             if (keyFromEcoHub == null)
             {
-                MessageBox.Show("PublicKey deleted from EcoHub, Can't be activated", "Error");
+                UiServices.ShowError("PublicKey deleted from EcoHub, Can't be activated", "Error");
                 return;
             }
 
@@ -926,11 +916,8 @@ namespace StandardApiFrameworkTool.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
-                });
+                UiServices.ShowError(ex.Message);
+                UiServices.SetIsProcessing(false);
                 return;
             }
 
@@ -949,10 +936,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 IsActive = pk.IsActive,
             }));
 
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
-            });
+            UiServices.SetIsProcessing(false);
 
         }
 
@@ -1006,10 +990,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
         private async Task ValidateAndUploadSignatureKey()
         {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = true;
-            });
+            UiServices.SetIsProcessing(true);
 
             (var cert, var baseAddress) = GetCertificateAndBaseAddress();
 
@@ -1057,10 +1038,7 @@ namespace StandardApiFrameworkTool.ViewModels
             GeneratedSignaturePublicKey = string.Empty;
             GeneratedSignaturePrivateKey = string.Empty;
 
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
-            });
+            UiServices.SetIsProcessing(false);
         }
 
 
@@ -1070,7 +1048,7 @@ namespace StandardApiFrameworkTool.ViewModels
             if (string.IsNullOrWhiteSpace(GeneratedSignaturePublicKey)
                 || string.IsNullOrWhiteSpace(GeneratedSignaturePrivateKey))
             {
-                MessageBox.Show("Empty public key or private key. Please generate a key pair first.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError("Empty public key or private key. Please generate a key pair first.", "Error");
                 return;
             }
 
@@ -1079,7 +1057,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
             if (!isValid)
             {
-                MessageBox.Show("Validation failed.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError("Validation failed.", "Error");
                 return;
             }
 
@@ -1126,7 +1104,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    UiServices.ShowError(ex.Message, "Error");
                     return;
                 }
             }
@@ -1134,7 +1112,7 @@ namespace StandardApiFrameworkTool.ViewModels
             SaveSignaturePrivateKeyOnlyToDb(currentVersion);
 
             // Call service to upload and activate the key (implement service logic)
-            MessageBox.Show("Public key uploaded successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            UiServices.ShowInfo("Public key uploaded successfully!", "Success");
         }
 
         private void SaveSignaturePrivateKeyOnlyToDb(string currentVersion)
@@ -1142,7 +1120,7 @@ namespace StandardApiFrameworkTool.ViewModels
             var alreadyInDB = _dbContext.SignatureKeys.FirstOrDefault(x => x.Version == currentVersion);
             if (alreadyInDB != null)
             {
-                MessageBox.Show($"Version {currentVersion} is already uploaded in the tool");
+                UiServices.ShowInfo($"Version {currentVersion} is already uploaded in the tool");
                 return;
             }
 
@@ -1185,10 +1163,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
         private async void ActivateSignatureKey(SignatureKey signatureKey)
         {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = true;
-            });
+            UiServices.SetIsProcessing(true);
 
             (var cert, var baseAddress) = GetCertificateAndBaseAddress();
 
@@ -1200,7 +1175,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 .FirstOrDefault(x => x.Version == signatureKey.Version);
             
             if(keyFromEcoHub == null) {
-                MessageBox.Show("PublicKey deleted from EcoHub, Can't be activated", "Error");
+                UiServices.ShowError("PublicKey deleted from EcoHub, Can't be activated", "Error");
                 return; }
 
             try
@@ -1215,11 +1190,8 @@ namespace StandardApiFrameworkTool.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
-                });
+                UiServices.ShowError(ex.Message);
+                UiServices.SetIsProcessing(false);
                 return;
             }
 
@@ -1238,10 +1210,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 IsActive = pk.IsActive,
             }));
 
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
-            });
+            UiServices.SetIsProcessing(false);
 
         }
 
@@ -1257,14 +1226,14 @@ namespace StandardApiFrameworkTool.ViewModels
             var profile = _dbContext.Profiles.FirstOrDefault();
             if (profile == null)
             {
-                MessageBox.Show("Profile information is missing. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError("Profile information is missing. Please check your general settings.", "Error");
                 return (null, null);
             }
 
             var environment = _dbContext.EnvironmentSettings.FirstOrDefault(e => e.EnvironmentName == profile.SelectedEnvironment);
             if (environment == null)
             {
-                MessageBox.Show("Environment not found. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError("Environment not found. Please check your general settings.", "Error");
                 return (null, null);
             }
 

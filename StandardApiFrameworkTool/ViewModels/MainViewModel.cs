@@ -1,20 +1,11 @@
-﻿using StandardApiFrameworkTool.ViewModels;
-using StandardApiFrameworkTool.Views;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace StandardApiFrameworkTool.ViewModels
 {
     public class MainViewModel : ViewModelBase
     {
-        public object CurrentHomeView { get; set; } = new HomeView();
-        public object CurrentGeneralSettingsView { get; set; } = new GeneralSettingsView();
-        public object CurrentSendDataView { get; set; } = new SendDataView();
-        public object CurrentReceiveDataView { get; set; } = new ReceiveDataView();
-
+        public HomeViewModel Home { get; } = new HomeViewModel();
+        public GeneralSettingsViewModel GeneralSettings { get; } = new GeneralSettingsViewModel();
+        public SendDataViewModel SendData { get; } = new SendDataViewModel();
+        public ReceiveDataViewModel ReceiveData { get; } = new ReceiveDataViewModel();
 
         #region Props
 
@@ -49,5 +40,4 @@ namespace StandardApiFrameworkTool.ViewModels
             IsProcessing = false;
         }
     }
-
 }

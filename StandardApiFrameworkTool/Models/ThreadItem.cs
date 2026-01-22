@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Media;
+using Avalonia.Media;
 
 namespace StandardApiFrameworkTool.Models
 {
@@ -14,7 +14,7 @@ namespace StandardApiFrameworkTool.Models
         public string Payload { get; set; }
         public string Verified { get; set; }
         public string Label { get; set; }
-        public Brush LabelColor { get; set; }
+        public IBrush LabelColor { get; set; }
     }
 
 }

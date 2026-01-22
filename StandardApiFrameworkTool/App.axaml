@@ -1,0 +1,32 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:StandardApiFrameworkTool.Helpers"
+             xmlns:fluent="clr-namespace:Avalonia.Themes.Fluent;assembly=Avalonia.Themes.Fluent"
+             xmlns:vm="clr-namespace:StandardApiFrameworkTool.ViewModels"
+             xmlns:views="clr-namespace:StandardApiFrameworkTool.Views"
+             x:Class="StandardApiFrameworkTool.App"
+             RequestedThemeVariant="Light">
+    <Application.Styles>
+        <fluent:FluentTheme />
+    </Application.Styles>
+
+    <Application.Resources>
+        <helpers:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+        <helpers:BoolToBrushConverter x:Key="BoolToBrushConverter" />
+    </Application.Resources>
+
+    <Application.DataTemplates>
+        <DataTemplate DataType="vm:HomeViewModel">
+            <views:HomeView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:GeneralSettingsViewModel">
+            <views:GeneralSettingsView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:SendDataViewModel">
+            <views:SendDataView />
+        </DataTemplate>
+        <DataTemplate DataType="vm:ReceiveDataViewModel">
+            <views:ReceiveDataView />
+        </DataTemplate>
+    </Application.DataTemplates>
+</Application>

@@ -20,7 +20,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Text.Unicode;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Input;
 using System.Xml.Linq;
 using static System.Runtime.InteropServices.JavaScript.JSType;
@@ -99,17 +98,14 @@ namespace StandardApiFrameworkTool.ViewModels
 
         private async Task LoadReceiversAsync()
         {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = true;
-            });
+            UiServices.SetIsProcessing(true);
 
             try
             {
                 var profile = _dbContext.Profiles.FirstOrDefault();
                 if (profile == null)
                 {
-                    MessageBox.Show("Not connected. Please configure general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    UiServices.ShowError("Not connected. Please configure general settings.", "Error");
                     return;
                 }
 
@@ -118,7 +114,7 @@ namespace StandardApiFrameworkTool.ViewModels
                 var environment = _dbContext.EnvironmentSettings.FirstOrDefault(e => e.EnvironmentName == profile.SelectedEnvironment);
                 if (environment == null)
                 {
-                    MessageBox.Show("Environment information is missing.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    UiServices.ShowError("Environment information is missing.", "Error");
                     return;
                 }
 
@@ -138,18 +134,15 @@ namespace StandardApiFrameworkTool.ViewModels
                 }
                 else
                 {
-                    MessageBox.Show("No receivers found.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                    UiServices.ShowInfo("No receivers found.", "Info");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"An error occurred while loading receivers: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError($"An error occurred while loading receivers: {ex.Message}", "Error");
             }
 
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
-            });
+            UiServices.SetIsProcessing(false);
         }
 
         #endregion
@@ -268,29 +261,26 @@ namespace StandardApiFrameworkTool.ViewModels
 
         private async Task FetchAndEncryptContentAsync()
         {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = true;
-            });
+            UiServices.SetIsProcessing(true);
             try
             {
                 var profile = _dbContext.Profiles.FirstOrDefault();
                 if (profile == null)
                 {
-                    MessageBox.Show("Profile information is missing. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    UiServices.ShowError("Profile information is missing. Please check your general settings.", "Error");
                     return;
                 }
 
                 var environment = _dbContext.EnvironmentSettings.FirstOrDefault(e => e.EnvironmentName == profile.SelectedEnvironment);
                 if (environment == null)
                 {
-                    MessageBox.Show("Environment not found. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    UiServices.ShowError("Environment not found. Please check your general settings.", "Error");
                     return;
                 }
 
                 if (string.IsNullOrWhiteSpace(InputContent))
                 {
-                    MessageBox.Show("Please enter content to encrypt.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    UiServices.ShowError("Please enter content to encrypt.", "Error");
                     return;
                 }
 
@@ -298,7 +288,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
                 if(SelectedReceiver == null) 
                 {
-                    MessageBox.Show("Please select a receiver first from step 1", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    UiServices.ShowError("Please select a receiver first from step 1", "Error");
                     return;
                 }
 
@@ -310,12 +300,9 @@ namespace StandardApiFrameworkTool.ViewModels
 
                 if (publicKeyInfo == null || publicKeyInfo.Count == 0)
                 {
-                    MessageBox.Show("Failed to retrieve a valid public key.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    UiServices.ShowError("Failed to retrieve a valid public key.", "Error");
 
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
-                    });
+                    UiServices.SetIsProcessing(false);
 
                     return;
                 }
@@ -328,12 +315,9 @@ namespace StandardApiFrameworkTool.ViewModels
 
                 if (!hasEncKey)
                 {
-                    MessageBox.Show("Failed to retrieve a valid encryption public key.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    UiServices.ShowError("Failed to retrieve a valid encryption public key.", "Error");
 
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
-                    });
+                    UiServices.SetIsProcessing(false);
 
                     return;
                 }
@@ -351,13 +335,10 @@ namespace StandardApiFrameworkTool.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"An error occurred: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError($"An error occurred: {ex.Message}", "Error");
             }
 
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
-            });
+            UiServices.SetIsProcessing(false);
         }
 
         private void SignPayload()
@@ -374,7 +355,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
             if(signKey == null)
             {
-                MessageBox.Show("No Signing Key found.");
+                UiServices.ShowError("No Signing Key found.");
                 return;
             }
 
@@ -421,7 +402,7 @@ namespace StandardApiFrameworkTool.ViewModels
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error encrypting content: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError($"Error encrypting content: {ex.Message}", "Error");
             }
         }
 
@@ -504,20 +485,20 @@ namespace StandardApiFrameworkTool.ViewModels
             var profile = _dbContext.Profiles.FirstOrDefault();
             if (profile == null)
             {
-                MessageBox.Show("Profile information is missing. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError("Profile information is missing. Please check your general settings.", "Error");
                 return;
             }
 
             var environment = _dbContext.EnvironmentSettings.FirstOrDefault(e => e.EnvironmentName == profile.SelectedEnvironment);
             if (environment == null)
             {
-                MessageBox.Show("Environment not found. Please check your general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError("Environment not found. Please check your general settings.", "Error");
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(InputContent))
             {
-                MessageBox.Show("Please enter content to encrypt.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError("Please enter content to encrypt.", "Error");
                 return;
             }
 
@@ -525,7 +506,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
             if (SelectedReceiver == null)
             {
-                MessageBox.Show("Please select a receiver first from step 1", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError("Please select a receiver first from step 1", "Error");
                 return;
             }
 
@@ -537,12 +518,9 @@ namespace StandardApiFrameworkTool.ViewModels
 
             if (publicKeyInfo == null || publicKeyInfo.Count == 0)
             {
-                MessageBox.Show("Failed to retrieve a valid public key.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError("Failed to retrieve a valid public key.", "Error");
 
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
-                });
+                UiServices.SetIsProcessing(false);
 
                 return;
             }
@@ -555,12 +533,9 @@ namespace StandardApiFrameworkTool.ViewModels
 
             if (!hasEncKey)
             {
-                MessageBox.Show("Failed to retrieve a valid encryption public key.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError("Failed to retrieve a valid encryption public key.", "Error");
 
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
-                });
+                UiServices.SetIsProcessing(false);
 
                 return;
             }
@@ -662,7 +637,7 @@ namespace StandardApiFrameworkTool.ViewModels
             var profile = _dbContext.Profiles.FirstOrDefault();
             if (profile == null)
             {
-                MessageBox.Show("Not connected. Please configure general settings.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError("Not connected. Please configure general settings.", "Error");
                 return;
             }
 
@@ -671,7 +646,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
             if (env == null)
             {
-                MessageBox.Show("Environment settings not found!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError("Environment settings not found!", "Error");
                 return;
             }
 
@@ -747,19 +722,19 @@ namespace StandardApiFrameworkTool.ViewModels
                 // Send the message to the Kafka topic
                 var deliveryReport = await producer.ProduceAsync(topic, message);
 
-                MessageBox.Show($"Message sent to topic {topic}. Offset: {deliveryReport.Offset}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                UiServices.ShowInfo($"Message sent to topic {topic}. Offset: {deliveryReport.Offset}", "Success");
             }
             catch (Newtonsoft.Json.JsonException ex)
             {
-                MessageBox.Show($"Invalid JSON format: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError($"Invalid JSON format: {ex.Message}", "Error");
             }
             catch (ProduceException<ProcessIdType, JObject> ex)
             {
-                MessageBox.Show($"Kafka error: {ex.Error.Reason}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError($"Kafka error: {ex.Error.Reason}", "Error");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"An error occurred: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError($"An error occurred: {ex.Message}", "Error");
             }
         }
 

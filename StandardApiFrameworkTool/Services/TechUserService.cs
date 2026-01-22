@@ -7,7 +7,7 @@ using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows;
+using StandardApiFrameworkTool.Helpers;
 
 namespace StandardApiFrameworkTool.Services
 {
@@ -60,14 +60,14 @@ namespace StandardApiFrameworkTool.Services
                 }
                 else
                 {
-                    MessageBox.Show($"Tech User Enrolment - Status Code {response.StatusCode}, " +
-                        $"Message: {await response.Content.ReadAsStringAsync()}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    UiServices.ShowError($"Tech User Enrolment - Status Code {response.StatusCode}, " +
+                        $"Message: {await response.Content.ReadAsStringAsync()}", "Error");
                     return null;
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"An error occurred: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError($"An error occurred: {ex.Message}", "Error");
                 return null;
             }
         }
@@ -123,15 +123,15 @@ namespace StandardApiFrameworkTool.Services
                     }
                     else
                     {
-                        MessageBox.Show($"Get Receiver - Status Code {response.StatusCode}, " +
-                            $"Message: {await response.Content.ReadAsStringAsync()}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        UiServices.ShowError($"Get Receiver - Status Code {response.StatusCode}, " +
+                            $"Message: {await response.Content.ReadAsStringAsync()}", "Error");
                         return null;
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"An error occurred: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError($"An error occurred: {ex.Message}", "Error");
                 return null;
             }
         }

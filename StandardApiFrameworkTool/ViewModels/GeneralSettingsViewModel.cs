@@ -2,7 +2,6 @@
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Input;
 using Microsoft.EntityFrameworkCore;
 using StandardApiFrameworkTool.Helpers;
@@ -121,10 +120,7 @@ namespace StandardApiFrameworkTool.ViewModels
 
         private async Task SaveSettingsAsync()
         {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = true;
-            });
+            UiServices.SetIsProcessing(true);
 
             var environment = _context.EnvironmentSettings.FirstOrDefault(e => e.EnvironmentName == SelectedEnvironment);
             if (environment != null)
@@ -179,24 +175,21 @@ namespace StandardApiFrameworkTool.ViewModels
                         await _context.SaveChangesAsync();
                     }
 
-                    MessageBox.Show("Settings saved and Tech User enrolled successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    UiServices.ShowInfo("Settings saved and Tech User enrolled successfully.", "Success");
                 }
                 else
                 {
-                    MessageBox.Show("Failed to enroll Tech User. Check your settings and try again.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    UiServices.ShowError("Failed to enroll Tech User. Check your settings and try again.", "Error");
                 }
             }
             else
             {
-                MessageBox.Show("Environment not found. Please select a valid environment.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                UiServices.ShowError("Environment not found. Please select a valid environment.", "Error");
             }
 
             LoadSettingsAsync();
 
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                ((MainViewModel)Application.Current.MainWindow.DataContext).IsProcessing = false;
-            });
+            UiServices.SetIsProcessing(false);
         }
 
         private void UpdateEnvironmentDetails()

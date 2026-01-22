@@ -4,8 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Data;
-using System.Windows;
+using Avalonia.Data.Converters;
 
 namespace StandardApiFrameworkTool.Helpers
 {
@@ -13,9 +12,7 @@ namespace StandardApiFrameworkTool.Helpers
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is bool boolValue)
-                return boolValue ? Visibility.Visible : Visibility.Collapsed;
-            return Visibility.Collapsed;
+            return value is bool boolValue && boolValue;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
