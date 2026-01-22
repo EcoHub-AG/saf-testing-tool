@@ -5,20 +5,27 @@
         Height="800"
         Width="1200">
     <Grid RowDefinitions="*,Auto">
-        <TabControl Grid.Row="0">
-            <TabItem Header="Home">
-                <ContentControl Content="{Binding Home}" />
-            </TabItem>
-            <TabItem Header="General Settings">
-                <ContentControl Content="{Binding GeneralSettings}" />
-            </TabItem>
-            <TabItem Header="Send Data">
-                <ContentControl Content="{Binding SendData}" />
-            </TabItem>
-            <TabItem Header="Receive Data">
-                <ContentControl Content="{Binding ReceiveData}" />
-            </TabItem>
-        </TabControl>
+        <Grid Grid.Row="0" RowDefinitions="Auto,*">
+            <TabStrip x:Name="MainTabs"
+                      HorizontalAlignment="Center"
+                      Grid.Row="0">
+                <TabItem Header="Home">
+                    <ContentControl Content="{Binding Home}" />
+                </TabItem>
+                <TabItem Header="General Settings">
+                    <ContentControl Content="{Binding GeneralSettings}" />
+                </TabItem>
+                <TabItem Header="Send Data">
+                    <ContentControl Content="{Binding SendData}" />
+                </TabItem>
+                <TabItem Header="Receive Data">
+                    <ContentControl Content="{Binding ReceiveData}" />
+                </TabItem>
+            </TabStrip>
+
+            <ContentPresenter Grid.Row="1"
+                              Content="{Binding SelectedItem.Content, ElementName=MainTabs}" />
+        </Grid>
 
         <Border Grid.Row="1" Background="#1F5A99" Padding="8">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="10">

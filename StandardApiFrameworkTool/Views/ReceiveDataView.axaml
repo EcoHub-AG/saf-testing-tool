@@ -3,8 +3,10 @@
              xmlns:dataGrid="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.DataGrid"
              xmlns:shapes="clr-namespace:Avalonia.Controls.Shapes;assembly=Avalonia.Controls"
              x:Class="StandardApiFrameworkTool.Views.ReceiveDataView">
-    <Grid Margin="20">
-        <TabControl>
+    <Grid Margin="20" RowDefinitions="Auto,*">
+        <TabStrip x:Name="ReceiveTabs"
+                  HorizontalAlignment="Center"
+                  Grid.Row="0">
             <TabItem Header="Encryption">
                 <Grid RowDefinitions="Auto,5*,5*">
                     <TextBlock Text="Manage Private Keys" FontWeight="SemiBold" FontSize="15" Margin="0,0,0,10" Grid.Row="0" />
@@ -50,7 +52,7 @@
                                  TextWrapping="NoWrap"
                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                 Margin="0,5,0,10"
+                                 Margin="0,5,8,10"
                                  Text="{Binding GeneratedPublicKey}"
                                  HorizontalAlignment="Stretch"
                                  VerticalAlignment="Stretch" />
@@ -63,7 +65,7 @@
                                  TextWrapping="NoWrap"
                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                 Margin="0,5,0,10"
+                                 Margin="8,5,0,10"
                                  Text="{Binding GeneratedPrivateKey}"
                                  HorizontalAlignment="Stretch"
                                  VerticalAlignment="Stretch" />
@@ -125,7 +127,7 @@
                                  TextWrapping="NoWrap"
                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                 Margin="0,5,0,10"
+                                 Margin="0,5,8,10"
                                  Text="{Binding GeneratedSignaturePublicKey}"
                                  HorizontalAlignment="Stretch"
                                  VerticalAlignment="Stretch" />
@@ -138,7 +140,7 @@
                                  TextWrapping="NoWrap"
                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                 Margin="0,5,0,10"
+                                 Margin="8,5,0,10"
                                  Text="{Binding GeneratedSignaturePrivateKey}"
                                  HorizontalAlignment="Stretch"
                                  VerticalAlignment="Stretch" />
@@ -217,6 +219,9 @@
                                Margin="0,5,0,0" />
                 </Grid>
             </TabItem>
-        </TabControl>
+        </TabStrip>
+
+        <ContentPresenter Grid.Row="1"
+                          Content="{Binding SelectedItem.Content, ElementName=ReceiveTabs}" />
     </Grid>
 </UserControl>
