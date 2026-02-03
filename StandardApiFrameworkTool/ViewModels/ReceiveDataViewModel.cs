@@ -165,7 +165,6 @@ namespace StandardApiFrameworkTool.ViewModels
                     var publicKeyPem = certificate.ExportCertificatePem();
                     var privateKey = certificate.GetRSAPrivateKey();
                     var privateKeyPem = privateKey.ExportRSAPrivateKeyPem();
-                    // var caPem = File.ReadAllText("ca.pem");
 
                     string bootstrapServers = $"{env.CsmHost}:9092"; // Replace with your Kafka broker(s) address
 
@@ -176,7 +175,6 @@ namespace StandardApiFrameworkTool.ViewModels
                         SecurityProtocol = SecurityProtocol.Ssl,
                         SslCertificatePem = publicKeyPem,
                         SslKeyPem = privateKeyPem,
-                        //SslCaPem = caPem,
                         EnableAutoCommit = false,
                         GroupId = $"CG-00001-{profile.IdpNumber}",
                     };
@@ -330,15 +328,15 @@ namespace StandardApiFrameworkTool.ViewModels
                 var json = JToken.Parse(jsonText);
                 string processName = json["processName"]?.ToString();
 
-                if (processName == "Invoices")
+                if (processName == "invoice")
                 {
                     return (processName, new SolidColorBrush(Colors.Purple));
                 }
-                else if(processName == "Contract")
+                else if(processName == "contract")
                 {
                     return (processName, new SolidColorBrush(Colors.Orange));
                 }
-                else if(processName == "Commission")
+                else if(processName == "commission")
                 {
                     return (processName, new SolidColorBrush(Colors.Green));
                 }

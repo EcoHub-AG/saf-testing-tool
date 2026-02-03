@@ -204,9 +204,9 @@ namespace StandardApiFrameworkTool.ViewModels
                 new ObservableCollection<string>
                 {
             "offer.nlpi",
-            "Invoices",
-            "Contract",
-            "Commission"
+            "invoice",
+            "contract",
+            "commission"
                 };
 
         public ObservableCollection<string> Versions { get; } =

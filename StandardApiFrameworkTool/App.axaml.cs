@@ -1,3 +1,5 @@
+using System;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -14,6 +16,12 @@ namespace StandardApiFrameworkTool
 {
     public partial class App : Application
     {
+        [DllImport("kernel32.dll")]
+        private static extern bool AllocConsole();
+
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr GetConsoleWindow();
+
         public override void Initialize()
         {
             AvaloniaXamlLoader.Load(this);
@@ -21,6 +29,8 @@ namespace StandardApiFrameworkTool
 
         public override void OnFrameworkInitializationCompleted()
         {
+            // EnsureConsole();
+
             using (var context = new AppDbContext())
             {
                 DBInitializer.Initialize(context);
@@ -64,6 +74,14 @@ namespace StandardApiFrameworkTool
             }
 
             base.OnFrameworkInitializationCompleted();
+        }
+
+        private static void EnsureConsole()
+        {
+            if (GetConsoleWindow() == IntPtr.Zero)
+            {
+                AllocConsole();
+            }
         }
 
         private static Task ShowMessageAsync(Window owner, NotificationRequest request)

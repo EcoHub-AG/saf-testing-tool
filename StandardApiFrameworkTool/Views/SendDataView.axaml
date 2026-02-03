@@ -28,10 +28,21 @@
             </TabItem>
 
             <TabItem Header="Zip &amp; Encrypt">
-                <Grid RowDefinitions="Auto,*,Auto,Auto">
+                <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
+                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
+                        <TextBlock Margin="0,6,0,0">Process</TextBlock>
+                        <ComboBox Width="200"
+                                  ItemsSource="{Binding Standards}"
+                                  SelectedItem="{Binding SelectedStandard}" />
+                        <TextBlock Margin="10,6,0,0">Version</TextBlock>
+                        <ComboBox Width="140"
+                                  ItemsSource="{Binding Versions}"
+                                  SelectedItem="{Binding SelectedVersion}" />
+                    </StackPanel>
+
                     <TextBlock Text="Write Content:"
                                FontWeight="SemiBold"
-                               Grid.Row="0" />
+                               Grid.Row="1" />
 
                     <TextBox
                         FontFamily="Consolas"
@@ -43,9 +54,9 @@
                         Text="{Binding InputContent}"
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch"
-                        Grid.Row="1" />
+                        Grid.Row="2" />
 
-                    <Grid Grid.Row="2" RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,16,*">
+                    <Grid Grid.Row="3" RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,16,*">
                         <TextBlock Text="Encrypted AES Key:" FontWeight="SemiBold" Grid.Row="0" />
                         <TextBox
                             FontFamily="Consolas"
@@ -110,15 +121,27 @@
                     <Button Content="Zip &amp; Encrypt"
                             Command="{Binding EncryptContentCommand}"
                             HorizontalAlignment="Left"
-                            Grid.Row="3"
+                            Grid.Row="4"
                             Margin="0,10,0,0" />
                 </Grid>
             </TabItem>
 
             <TabItem Header="Create Payload &amp; Send">
                 <Grid RowDefinitions="Auto,*,Auto">
-                    <StackPanel Orientation="Horizontal">
-                        <Button Command="{Binding GeneratePayloadCommand}">Generate payload</Button>
+                    <StackPanel Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Margin="0,6,0,0">Process</TextBlock>
+                            <ComboBox Width="200"
+                                      ItemsSource="{Binding Standards}"
+                                      SelectedItem="{Binding SelectedStandard}" />
+                            <TextBlock Margin="10,6,0,0">Version</TextBlock>
+                            <ComboBox Width="140"
+                                      ItemsSource="{Binding Versions}"
+                                      SelectedItem="{Binding SelectedVersion}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Command="{Binding GeneratePayloadCommand}">Generate payload</Button>
+                        </StackPanel>
                     </StackPanel>
 
                     <TextBox
