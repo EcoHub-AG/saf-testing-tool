@@ -19,7 +19,7 @@ namespace StandardApiFrameworkTool.Services
             string idpNumber,
             X509Certificate2 certificate)
         {
-            string apiUrl = $"{baseAddress}/publickeystore/v1/members/{idpNumber}/keys";
+            string apiUrl = $"{baseAddress}/publickeystore/v2/members/{idpNumber}/keys";
 
             HttpClientHandler handler = new HttpClientHandler
             {
@@ -49,7 +49,7 @@ namespace StandardApiFrameworkTool.Services
             string baseAddress,
             X509Certificate2 certificate)
         {
-            string apiUrl = $"{baseAddress}/publickeystore/v1/keys";
+            string apiUrl = $"{baseAddress}/publickeystore/v2/keys";
 
             HttpClientHandler handler = new HttpClientHandler
             {
@@ -83,7 +83,7 @@ namespace StandardApiFrameworkTool.Services
             string keyType,
             X509Certificate2 certificate)
         {
-            string apiUrl = $"{baseAddress}/publickeystore/v1/keys";
+            string apiUrl = $"{baseAddress}/publickeystore/v2/keys";
 
             HttpClientHandler handler = new HttpClientHandler
             {
@@ -137,7 +137,7 @@ namespace StandardApiFrameworkTool.Services
             string keyId,
             X509Certificate2 certificate)
         {
-            string apiUrl = $"{baseAddress}/publickeystore/v1/keys/{keyId}/activate";
+            string apiUrl = $"{baseAddress}/publickeystore/v2/keys/{keyId}/activate";
 
             HttpClientHandler handler = new HttpClientHandler
             {
@@ -170,7 +170,7 @@ namespace StandardApiFrameworkTool.Services
             string privateKeypem,
             string publicKeyPem)
         {
-            string verifyUrl = $"{baseAddress}/publickeystore/v1/keys/{keyId}/verify";
+            string verifyUrl = $"{baseAddress}/publickeystore/v2/keys/{keyId}/verify";
 
             using var client = CreateMtlsClient(certificate);
 
@@ -197,7 +197,7 @@ namespace StandardApiFrameworkTool.Services
             string privateKeypem,
             string publicKeyPem)
         {
-            string verifyUrl = $"{baseAddress}/publickeystore/v1/keys/{keyId}/verify";
+            string verifyUrl = $"{baseAddress}/publickeystore/v2/keys/{keyId}/verify";
 
             using var client = CreateMtlsClient(certificate);
 

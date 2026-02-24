@@ -45,7 +45,7 @@ namespace StandardApiFrameworkTool.Services
                 var jsonRequest = JsonConvert.SerializeObject(requestData);
 
                 // Send HTTP POST request
-                var response = await client.PostAsync("general/v1/techUserEnrolment", new StringContent(jsonRequest, Encoding.UTF8, "application/json"));
+                var response = await client.PostAsync("general/v2/techUserEnrolment", new StringContent(jsonRequest, Encoding.UTF8, "application/json"));
 
                 // Handle response
                 if (response.IsSuccessStatusCode)
@@ -109,7 +109,7 @@ namespace StandardApiFrameworkTool.Services
                     var jsonRequest = JsonConvert.SerializeObject(requestData);
 
                     // Send HTTP POST request
-                    var response = await client.PostAsync($"{baseAddress}/general/v1/saf-receivers", new StringContent(jsonRequest, Encoding.UTF8, "application/json"));
+                    var response = await client.PostAsync($"{baseAddress}/general/v2/saf-receivers", new StringContent(jsonRequest, Encoding.UTF8, "application/json"));
 
                     // Handle response
                     if (response.IsSuccessStatusCode)
