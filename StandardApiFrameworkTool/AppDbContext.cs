@@ -19,8 +19,8 @@ namespace StandardApiFrameworkTool
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            // SQLite database connection
-            optionsBuilder.UseSqlite("Data Source=appdata.db");
+            var dbPath = Path.Combine(AppContext.BaseDirectory, "appdata.db");
+            optionsBuilder.UseSqlite($"Data Source={dbPath}");
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
