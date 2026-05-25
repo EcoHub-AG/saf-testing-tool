@@ -27,6 +27,9 @@ cp -r ${PUBLISH_DIR}/* "${RELEASE_DIR}/${BUNDLE_NAME}/Contents/MacOS/"
 # Copy Info.plist
 cp "assets/mac/Info.plist" "${RELEASE_DIR}/${BUNDLE_NAME}/Contents/"
 
+# Copy app icon
+cp "assets/mac/ecohub.icns" "${RELEASE_DIR}/${BUNDLE_NAME}/Contents/Resources/"
+
 # Make the main executable runnable
 chmod +x "${RELEASE_DIR}/${BUNDLE_NAME}/Contents/MacOS/StandardApiFrameworkTool"
 
