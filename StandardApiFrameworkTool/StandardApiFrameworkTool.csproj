@@ -7,6 +7,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>ecohub.ico</ApplicationIcon>
     <AvaloniaBuildServices>false</AvaloniaBuildServices>
+    <Version>2.0.1</Version>
+    <AssemblyVersion>2.0.1</AssemblyVersion>
+    <FileVersion>2.0.1</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

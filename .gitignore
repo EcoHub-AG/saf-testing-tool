@@ -90,6 +90,14 @@ migrations/
 *.ldf
 *.ndf
 
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+
+# Mac release output
+release/
+
 # WPF-specific files
 *.g.*
 *.i.*
