@@ -30,6 +30,9 @@ cp "assets/mac/Info.plist" "${RELEASE_DIR}/${BUNDLE_NAME}/Contents/"
 # Make the main executable runnable
 chmod +x "${RELEASE_DIR}/${BUNDLE_NAME}/Contents/MacOS/StandardApiFrameworkTool"
 
+echo "===> Ad-hoc signing .app bundle..."
+codesign --sign - --force --deep --timestamp=none "${RELEASE_DIR}/${BUNDLE_NAME}"
+
 echo "===> Creating zip archive..."
 rm -f "${RELEASE_DIR}/${ZIP_NAME}"
 ditto -c -k --keepParent "${RELEASE_DIR}/${BUNDLE_NAME}" "${RELEASE_DIR}/${ZIP_NAME}"
